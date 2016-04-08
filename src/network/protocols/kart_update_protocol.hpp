@@ -2,7 +2,9 @@
 #define KART_UPDATE_PROTOCOL_HPP
 
 #include "network/protocol.hpp"
+#include "utils/cpp2011.hpp"
 #include "utils/vec3.hpp"
+
 #include "LinearMath/btQuaternion.h"
 
 #include <vector>
@@ -20,17 +22,17 @@ private:
     /** Stores the last updated rotation for a kart. */
     std::vector<btQuaternion> m_next_quaternions;
 
-    /** True if a new update for each kart positions was received. */
-    std::vector<bool> m_need_update;
+    /** True if a new update for the kart positions was received. */
+    bool m_was_updated;
 
 public:
              KartUpdateProtocol();
     virtual ~KartUpdateProtocol();
 
-    virtual bool notifyEvent(Event* event);
-    virtual void setup();
-    virtual void update();
-    virtual void asynchronousUpdate() {};
+    virtual bool notifyEvent(Event* event) OVERRIDE;
+    virtual void setup() OVERRIDE;
+    virtual void update(float dt) OVERRIDE;
+    virtual void asynchronousUpdate() OVERRIDE {};
 
 };   // KartUpdateProtocol
 

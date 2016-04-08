@@ -305,8 +305,8 @@ void STKHost::init()
     // Optional: start the network console
     m_network_console = new NetworkConsole();
     m_network_console->run();
-
-}   // STKHost
+ 
+}  // STKHost
 
 // ----------------------------------------------------------------------------
 /** Destructor. Stops the listening thread, closes the packet log file and
@@ -528,9 +528,6 @@ void* STKHost::mainLoop(void* self)
             // Create an STKEvent with the event data. This will also
             // create the peer if it doesn't exist already
             Event* stk_event = new Event(&event);
-            if (stk_event->getType() == EVENT_TYPE_MESSAGE)
-                Network::logPacket(stk_event->data(), true);
-
             Log::verbose("STKHost", "Event of type %d received",
                          (int)(stk_event->getType()));
             STKPeer* peer = stk_event->getPeer();
@@ -543,13 +540,13 @@ void* STKHost::mainLoop(void* self)
             }   // EVENT_TYPE_CONNECTED
             else if (stk_event->getType() == EVENT_TYPE_MESSAGE)
             {
+                Network::logPacket(stk_event->data(), true);
                 TransportAddress stk_addr(peer->getAddress());
                 Log::verbose("NetworkManager",
                              "Message, Sender : %s, message:",
                              stk_addr.toString(/*show port*/false).c_str());
                 Log::verbose("NetworkManager", "%s",
                              stk_event->data().getLogMessage().c_str());
-
             }   // if message event
 
             // notify for the event now.
@@ -575,7 +572,7 @@ void STKHost::handleLANRequests()
     if(len<=0) return;
     BareNetworkString message(buffer, len);
     std::string command;
-    message.decodeString(0, &command);
+    message.decodeString(&command);
     if (command == "stk-server")
     {
         Log::verbose("STKHost", "Received LAN server query");
@@ -589,12 +586,14 @@ void STKHost::handleLANRequests()
         // current players, and the client's ip address and port
         // number (which solves the problem which network interface
         // might be the right one if there is more than one).
-        BareNetworkString s(name.size()+1+8);
+        BareNetworkString s(name.size()+1+11);
         s.encodeString(name);
         s.addUInt8(NetworkConfig::get()->getMaxPlayers());
         s.addUInt8(0);   // FIXME: current number of connected players
         s.addUInt32(sender.getIP());
         s.addUInt16(sender.getPort());
+        s.addUInt16((uint16_t)race_manager->getMinorMode());
+        s.addUInt8((uint8_t)race_manager->getDifficulty());
         m_lan_network->sendRawPacket(s, sender);
     }   // if message is server-requested
     else if (command == "connection-request")
@@ -625,6 +624,12 @@ bool STKHost::peerExists(const TransportAddress& peer)
     }
     return false;
 }   // peerExists
+
+// ----------------------------------------------------------------------------
+std::vector<NetworkPlayerProfile*> STKHost::getMyPlayerProfiles()
+{
+    return m_game_setup->getAllPlayersOnHost(m_host_id);
+}   // getMyPlayerProfiles
 
 // ----------------------------------------------------------------------------
 /** Returns the STK peer belonging to the given enet_peer. If no STKPeer

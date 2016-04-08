@@ -20,6 +20,7 @@
 
 #include "states_screens/dialogs/ghost_replay_info_dialog.hpp"
 #include "states_screens/state_manager.hpp"
+#include "states_screens/tracks_screen.hpp"
 #include "tracks/track.hpp"
 #include "tracks/track_manager.hpp"
 #include "utils/translation.hpp"
@@ -105,7 +106,7 @@ void GhostReplaySelection::loadList()
         row.push_back(GUIEngine::ListWidget::ListCell
             (rd.m_reverse ? _("Yes") : _("No"), -1, 1, true));
         row.push_back(GUIEngine::ListWidget::ListCell
-            (rd.m_difficulty == 3 ? _("Supertux") : rd.m_difficulty == 2 ?
+            (rd.m_difficulty == 3 ? _("SuperTux") : rd.m_difficulty == 2 ?
             _("Expert") : rd.m_difficulty == 1 ?
             _("Intermediate") : _("Novice") , -1, 1, true));
         row.push_back(GUIEngine::ListWidget::ListCell
@@ -141,6 +142,12 @@ void GhostReplaySelection::eventCallback(GUIEngine::Widget* widget,
         }
         new GhostReplayInfoDialog(selected_index);
     }   // click on replay file
+    else if (name == "record-ghost")
+    {
+        race_manager->setRecordRace(true);
+        TracksScreen::getInstance()->setOfficalTrack(false);
+        TracksScreen::getInstance()->push();
+    }
 
 }   // eventCallback
 
@@ -198,5 +205,13 @@ void GhostReplaySelection::onColumnClicked(int column_id)
     m_sort_desc = !m_sort_desc;
     loadList();
 }   // onColumnClicked
+
+// ----------------------------------------------------------------------------
+bool GhostReplaySelection::onEscapePressed()
+{
+    // Reset it when leave this screen
+    race_manager->setRecordRace(false);
+    return true;
+}   // onEscapePressed
 
 // ----------------------------------------------------------------------------

@@ -231,7 +231,8 @@ private:
 public:
                    Kart(const std::string& ident, unsigned int world_kart_id,
                         int position, const btTransform& init_transform,
-                        PerPlayerDifficulty difficulty);
+                        PerPlayerDifficulty difficulty,
+                        video::E_RENDER_TYPE rt = video::ERT_DEFAULT);
     virtual       ~Kart();
     virtual void   init(RaceManager::KartType type);
     virtual void   kartIsInRestNow();
@@ -297,7 +298,7 @@ public:
     virtual int getNumPowerup() const;
     // ------------------------------------------------------------------------
     /** Returns a points to this kart's graphical effects. */
-    KartGFX*       getKartGFX()                   { return m_kart_gfx;        }
+    virtual KartGFX* getKartGFX()               { return m_kart_gfx;         }
     // ------------------------------------------------------------------------
     /** Returns the remaining collected energy. */
     virtual float  getEnergy           () const { return m_collected_energy; }

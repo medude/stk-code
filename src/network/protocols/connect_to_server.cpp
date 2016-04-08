@@ -50,6 +50,7 @@ ConnectToServer::ConnectToServer() : Protocol(PROTOCOL_CONNECTION)
     m_host_id    = 0;
     m_quick_join = true;
     m_server_address.clear();
+    setHandleConnections(true);
 }   // ConnectToServer()
 
 // ----------------------------------------------------------------------------
@@ -65,7 +66,7 @@ ConnectToServer::ConnectToServer(uint32_t server_id, uint32_t host_id)
     m_quick_join = false;
     const Server *server = ServersManager::get()->getServerByID(server_id);
     m_server_address.copy(server->getAddress());
-
+    setHandleConnections(true);
 }   // ConnectToServer(server, host)
 
 // ----------------------------------------------------------------------------
@@ -162,8 +163,7 @@ void ConnectToServer::asynchronousUpdate()
             break;
         }
         case REQUESTING_CONNECTION:
-        {
-            // In case of a LAN server, m_current_protocol is NULL
+            // In case of a LAN server, m_crrent_protocol is NULL
             if (!m_current_protocol ||
                 m_current_protocol->getState() == PROTOCOL_STATE_TERMINATED)
             {
@@ -173,7 +173,7 @@ void ConnectToServer::asynchronousUpdate()
                 Log::info("ConnectToServer", "Connection request made");
                 if (m_server_address.getIP() == 0 ||
                     m_server_address.getPort() == 0  )
-                {
+                { 
                     // server data not correct, hide address and stop
                     m_state = HIDING_ADDRESS;
                     Log::error("ConnectToServer", "Server address is %s",
@@ -182,10 +182,22 @@ void ConnectToServer::asynchronousUpdate()
                     m_current_protocol->requestStart();
                     return;
                 }
-                handleSameLAN();
+                if (m_server_address.getIP() 
+                      == NetworkConfig::get()->getMyAddress().getIP() ||
+                      NetworkConfig::get()->isLAN())
+                {
+                    // We're in the same lan (same public ip address).
+                    // The state will change to CONNECTING
+                    handleSameLAN();
+                }
+                else
+                {
+                    m_state = CONNECTING;
+                    m_current_protocol = new PingProtocol(m_server_address, 2.0);
+                    m_current_protocol->requestStart();
+                }
             }
             break;
-        }
         case CONNECTING: // waiting the server to answer our connection
             {
                 static double timer = 0;
@@ -376,7 +388,7 @@ void ConnectToServer::handleSameLAN()
 
     BareNetworkString message(buffer, len);
     std::string received;
-    message.decodeString(0, &received);
+    message.decodeString(&received);
     host->startListening(); // start listening again
     std::string aloha("aloha_stk");
     if (received==aloha)

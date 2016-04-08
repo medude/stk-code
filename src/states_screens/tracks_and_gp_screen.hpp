@@ -1,5 +1,5 @@
 //  SuperTuxKart - a fun racing game with go-kart
-//  Copyright (C) 2013-2015 Glenn De Jonghe
+//  Copyright (C) 2016 SuperTuxKart-Team
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -15,45 +15,52 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-
-#ifndef __HEADER_ONLINE_PROFILE_SERVERS_HPP__
-#define __HEADER_ONLINE_PROFILE_SERVERS_HPP__
-
-#include <string>
-#include <irrString.h>
+#ifndef HEADER_TRACKS_AND_GP_SCREEN_HPP
+#define HEADER_TRACKS_AND_GP_SCREEN_HPP
 
 #include "guiengine/screen.hpp"
-#include "guiengine/widgets.hpp"
-#include "states_screens/online_profile_base.hpp"
+#include <deque>
 
 namespace GUIEngine { class Widget; }
 
-
 /**
-  * \brief Online profiel overview screen
+  * \brief screen where the user can select a track or grand prix
   * \ingroup states_screens
   */
-class OnlineProfileServers : public OnlineProfileBase, public GUIEngine::ScreenSingleton<OnlineProfileServers>
+class TracksAndGPScreen : public GUIEngine::Screen,
+                          public GUIEngine::ScreenSingleton<TracksAndGPScreen>
 {
-protected:
-    OnlineProfileServers();
+    friend class GUIEngine::ScreenSingleton<TracksAndGPScreen>;
 
-    void doQuickPlay();
+private:
+
+    TracksAndGPScreen() : Screen("tracks_and_gp.stkgui") {}
+
+    /** adds the tracks from the current track group into the tracks ribbon */
+    void buildTrackList();
+
+    std::deque<std::string> m_random_track_list;
 
 public:
-    friend class GUIEngine::ScreenSingleton<OnlineProfileServers>;
 
     /** \brief implement callback from parent class GUIEngine::Screen */
-    virtual void loadedFromFile() OVERRIDE;
+    virtual void loadedFromFile() OVERRIDE {};
 
     /** \brief implement callback from parent class GUIEngine::Screen */
-    virtual void eventCallback(GUIEngine::Widget* widget, const std::string& name,
+    virtual void eventCallback(GUIEngine::Widget* widget,
+                               const std::string& name,
                                const int playerID) OVERRIDE;
 
     /** \brief implement callback from parent class GUIEngine::Screen */
     virtual void init() OVERRIDE;
-    virtual bool onEscapePressed() OVERRIDE;
 
-};   // class OnlineProfileServers
+    /** \brief implement callback from parent class GUIEngine::Screen */
+    virtual void beforeAddingWidget() OVERRIDE;
+
+
+    void setFocusOnTrack(const std::string& trackName);
+    void setFocusOnGP(const std::string& gpName);
+
+};
 
 #endif

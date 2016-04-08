@@ -351,9 +351,11 @@ private:
     /** Determines if saved GP should be continued or not*/
     bool m_continue_saved_gp;
 
-    bool m_will_record_race;
+    bool m_is_recording_race;
 
     bool m_has_ghost_karts;
+
+    bool m_watching_replay;
 public:
          RaceManager();
         ~RaceManager();
@@ -407,6 +409,7 @@ public:
     void saveGP();
     void startSingleRace(const std::string &track_ident, const int num_laps,
                           bool from_overworld);
+    void startWatchingReplay(const std::string &track_ident, const int num_laps);
     void setupPlayerKartInfo();
     void kartFinishedRace(const AbstractKart* kart, float time);
     void setNumPlayers(int players, int local_players=-1);
@@ -529,6 +532,21 @@ public:
         }
         return "";
     }   // getDifficultyAsString
+
+    // ------------------------------------------------------------------------
+    /** Returns the specified difficulty as a string. */
+    core::stringw getDifficultyName(Difficulty diff) const
+    {
+        switch (diff)
+        {
+        case RaceManager::DIFFICULTY_EASY:   return _("Novice");   break;
+        case RaceManager::DIFFICULTY_MEDIUM: return _("Intermediate"); break;
+        case RaceManager::DIFFICULTY_HARD:   return _("Expert");   break;
+        case RaceManager::DIFFICULTY_BEST:   return _("SuperTux");   break;
+        default:  assert(false);
+        }
+        return "";
+    }   // getDifficultyName
     // ------------------------------------------------------------------------
     const std::string& getTrackName() const { return m_tracks[m_track_number];}
     // ------------------------------------------------------------------------
@@ -704,7 +722,7 @@ public:
     // ------------------------------------------------------------------------
     void setRecordRace(bool record)
     {
-        m_will_record_race = record;
+        m_is_recording_race = record;
     }   // setRecordRace
     // ------------------------------------------------------------------------
     void setRaceGhostKarts(bool ghost)
@@ -712,15 +730,25 @@ public:
         m_has_ghost_karts = ghost;
     }   // setRaceGhostKarts
     // ------------------------------------------------------------------------
-    bool willRecordRace() const
+    void setWatchingReplay(bool watch)
     {
-        return m_will_record_race;
-    }   // willRecordRace
+        m_watching_replay = watch;
+    }   // setWatchingReplay
+    // ------------------------------------------------------------------------
+    bool isRecordingRace() const
+    {
+        return m_is_recording_race;
+    }   // isRecordingRace
     // ------------------------------------------------------------------------
     bool hasGhostKarts() const
     {
         return m_has_ghost_karts;
     }   // hasGhostKarts
+    // ------------------------------------------------------------------------
+    bool isWatchingReplay() const
+    {
+        return m_watching_replay;
+    }   // isWatchingReplay
 
 };   // RaceManager
 

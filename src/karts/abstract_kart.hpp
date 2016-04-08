@@ -19,6 +19,7 @@
 #ifndef HEADER_ABSTRACT_KART_HPP
 #define HEADER_ABSTRACT_KART_HPP
 
+#include <EMaterialTypes.h>
 #include <memory>
 
 #include "items/powerup_manager.hpp"
@@ -40,6 +41,7 @@ class btKart;
 class btQuaternion;
 class Controller;
 class Item;
+class KartGFX;
 class KartModel;
 class KartProperties;
 class Material;
@@ -97,7 +99,8 @@ public:
                    AbstractKart(const std::string& ident,
                                 int world_kart_id,
                                 int position, const btTransform& init_transform,
-                                PerPlayerDifficulty difficulty);
+                                PerPlayerDifficulty difficulty,
+                                video::E_RENDER_TYPE rt);
     virtual       ~AbstractKart();
     virtual core::stringw getName() const;
     virtual void   reset();
@@ -375,6 +378,9 @@ public:
     // ------------------------------------------------------------------------
     /** Returns the current powerup. */
     virtual Powerup *getPowerup() = 0;
+    // ------------------------------------------------------------------------
+    /** Returns a points to this kart's graphical effects. */
+    virtual KartGFX* getKartGFX() = 0;
     // ------------------------------------------------------------------------
     virtual void setPowerup (PowerupManager::PowerupType t, int n) = 0;
     // ------------------------------------------------------------------------

@@ -68,7 +68,7 @@ public:
 
     virtual void init() OVERRIDE;
 
-    virtual void tearDown() OVERRIDE {};
+    virtual bool onEscapePressed() OVERRIDE;
 
     /** \brief Implement IConfirmDialogListener callback */
     virtual void onConfirm() OVERRIDE;

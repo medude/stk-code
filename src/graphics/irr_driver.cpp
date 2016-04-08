@@ -131,7 +131,8 @@ IrrDriver::IrrDriver()
     m_lightviz = m_shadowviz = m_distortviz = m_rsm = m_rh = m_gi = false;
     m_boundingboxesviz = false;
     m_last_light_bucket_distance = 0;
-    memset(object_count, 0, sizeof(object_count));
+    memset(m_object_count, 0, sizeof(m_object_count));
+    memset(m_poly_count, 0, sizeof(m_poly_count));
 }   // IrrDriver
 
 // ----------------------------------------------------------------------------
@@ -188,12 +189,12 @@ STKRenderingPass IrrDriver::getPhase() const
 
 void IrrDriver::IncreaseObjectCount()
 {
-    object_count[m_phase]++;
+    m_object_count[m_phase]++;
 }
 
 void IrrDriver::IncreasePolyCount(unsigned Polys)
 {
-    poly_count[m_phase] += Polys;
+    m_poly_count[m_phase] += Polys;
 }
 
 core::array<video::IRenderTarget> &IrrDriver::getMainSetup()
@@ -1012,7 +1013,8 @@ scene::IMesh *IrrDriver::getMesh(const std::string &filename)
  *  \return Newly created skinned mesh. You should call drop() when you don't
  *          need it anymore.
  */
-scene::IAnimatedMesh *IrrDriver::copyAnimatedMesh(scene::IAnimatedMesh *orig)
+scene::IAnimatedMesh *IrrDriver::copyAnimatedMesh(scene::IAnimatedMesh *orig,
+                                                  video::E_RENDER_TYPE rt)
 {
     using namespace scene;
     CSkinnedMesh *mesh = dynamic_cast<CSkinnedMesh*>(orig);
@@ -1021,7 +1023,10 @@ scene::IAnimatedMesh *IrrDriver::copyAnimatedMesh(scene::IAnimatedMesh *orig)
         Log::error("copyAnimatedMesh", "Given mesh was not a skinned mesh.");
         return NULL;
     }
-    return mesh->clone();
+
+    scene::IAnimatedMesh* out = mesh->clone();
+    out->setRenderType(rt);
+    return out;
 }   // copyAnimatedMesh
 
 // ----------------------------------------------------------------------------
@@ -1889,13 +1894,13 @@ void IrrDriver::displayFPS()
     {
         fpsString = _("FPS: %d/%d/%d  - PolyCount: %d Solid, "
                       "%d Shadows - LightDist : %d",
-                    min, fps, max, poly_count[SOLID_NORMAL_AND_DEPTH_PASS],
-                    poly_count[SHADOW_PASS], m_last_light_bucket_distance);
-        poly_count[SOLID_NORMAL_AND_DEPTH_PASS] = 0;
-        poly_count[SHADOW_PASS] = 0;
-        object_count[SOLID_NORMAL_AND_DEPTH_PASS] = 0;
-        object_count[SOLID_NORMAL_AND_DEPTH_PASS] = 0;
-        object_count[TRANSPARENT_PASS] = 0;
+                    min, fps, max, m_poly_count[SOLID_NORMAL_AND_DEPTH_PASS],
+                    m_poly_count[SHADOW_PASS], m_last_light_bucket_distance);
+        m_poly_count[SOLID_NORMAL_AND_DEPTH_PASS] = 0;
+        m_poly_count[SHADOW_PASS] = 0;
+        m_object_count[SOLID_NORMAL_AND_DEPTH_PASS] = 0;
+        m_object_count[SOLID_NORMAL_AND_DEPTH_PASS] = 0;
+        m_object_count[TRANSPARENT_PASS] = 0;
     }
     else
         fpsString = _("FPS: %d/%d/%d - %d KTris", min, fps, max, (int)roundf(kilotris));

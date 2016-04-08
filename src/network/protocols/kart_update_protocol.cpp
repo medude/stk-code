@@ -14,13 +14,10 @@ KartUpdateProtocol::KartUpdateProtocol() : Protocol(PROTOCOL_KART_UPDATE)
     // (which is the update information from the server to the client).
     m_next_positions.resize(World::getWorld()->getNumKarts());
     m_next_quaternions.resize(World::getWorld()->getNumKarts());
-    m_need_update.resize(World::getWorld()->getNumKarts());
 
     // This flag keeps track if valid data for an update is in
     // the arrays
-    for (unsigned id = 0; id < m_need_update.size(); id++)
-        m_need_update[id] = false;
-
+    m_was_updated = false;
 }   // KartUpdateProtocol
 
 // ----------------------------------------------------------------------------
@@ -47,19 +44,18 @@ bool KartUpdateProtocol::notifyEvent(Event* event)
         Log::info("KartUpdateProtocol", "Message too short.");
         return true;
     }
-    ns.removeFront(4);
+    float time = ns.getFloat();
     while(ns.size() >= 29)
     {
-        uint8_t kart_id = ns.getUInt8(0);
-        Vec3 xyz = ns.getVec3(1);
-        btQuaternion quat = ns.getQuat(13);
+        uint8_t kart_id             = ns.getUInt8();
+        Vec3 xyz                    = ns.getVec3();
+        btQuaternion quat           = ns.getQuat();
         m_next_positions  [kart_id] = xyz;
         m_next_quaternions[kart_id] = quat;
-        ns.removeFront(29);
-        // Set the flag that a new update was received
-        m_need_update[kart_id] = true;
     }   // while ns.size()>29
 
+    // Set the flag that a new update was received
+    m_was_updated = true;
     return true;
 }   // notifyEvent
 
@@ -71,7 +67,7 @@ bool KartUpdateProtocol::notifyEvent(Event* event)
  *  or more updates before this client handles them, only the last one will
  *  actually be handled (i.e. outdated kart position updates are discarded).
  */
-void KartUpdateProtocol::update()
+void KartUpdateProtocol::update(float dt)
 {
     if (!World::getWorld())
         return;
@@ -125,20 +121,23 @@ void KartUpdateProtocol::update()
     // There is no lock necessary, since receiving new positions is done in
     // notifyEvent, which is called from the same thread that calls this
     // function.
-    for (unsigned id = 0; id < m_next_positions.size(); id++)
+    if(m_was_updated)
     {
-        if (!m_need_update[id]) continue;
-        AbstractKart *kart = World::getWorld()->getKart(id);
-        if (!kart->getController()->isLocalPlayerController())
+        for (unsigned id = 0; id < m_next_positions.size(); id++)
         {
-            btTransform transform;
-            transform.setOrigin(m_next_positions[id]);
-            transform.setRotation(m_next_quaternions[id]);
-            kart->getBody()->setCenterOfMassTransform(transform);
-            Log::verbose("KartUpdateProtocol", "Update kart %i pos", id);
-        }   // if not local player
-        m_need_update[id] = false; // mark that all updates were applied
-    }   // for id < num_karts
-
+            AbstractKart *kart = World::getWorld()->getKart(id);
+            if (!kart->getController()->isLocalPlayerController())
+            {
+                btTransform transform = kart->getBody()
+                                      ->getInterpolationWorldTransform();
+                transform.setOrigin(m_next_positions[id]);
+                transform.setRotation(m_next_quaternions[id]);
+                kart->getBody()->setCenterOfMassTransform(transform);
+                Log::verbose("KartUpdateProtocol", "Update kart %i pos",
+                             id);
+            }   // if not local player
+        }   // for id < num_karts
+        m_was_updated = false;  // mark that all updates were applied
+    }   // if m_was_updated
 }   // update
 

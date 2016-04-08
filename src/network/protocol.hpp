@@ -105,6 +105,11 @@ protected:
     /** The unique id of the protocol. */
     uint32_t        m_id;
 
+    /** True if this protocol should receive connection events. */
+    bool m_handle_connections;
+
+    /** TRue if this protocol should recceiver disconnection events. */
+    bool m_handle_disconnections;
 public:
              Protocol(ProtocolType type, CallbackObject* callback_object=NULL);
     virtual ~Protocol();
@@ -116,7 +121,7 @@ public:
 
     /** \brief Called by the protocol listener, synchronously with the main
      *  loop. Must be re-defined.*/
-    virtual void update() = 0;
+    virtual void update(float dt) = 0;
 
     /** \brief Called by the protocol listener as often as possible.
      *  Must be re-defined. */
@@ -133,6 +138,7 @@ public:
     void requestPause();
     void requestUnpause();
     void requestTerminate();
+    void findAndTerminateProtocol(ProtocolType type);
 
     // ------------------------------------------------------------------------
     /** \brief Called when the protocol is paused (by an other entity or by
@@ -177,7 +183,18 @@ public:
     /** \brief Method to get a protocol's type.
      *  \return The protocol type. */
     ProtocolType getProtocolType() const { return m_type; }
-
+    // ------------------------------------------------------------------------
+    /** Sets if this protocol should receive connection events. */
+    void setHandleConnections(bool b) { m_handle_connections = b; }
+    // ------------------------------------------------------------------------
+    /** Sets if this protocol should receive disconnection events. */
+    void setHandleDisconnections(bool b) { m_handle_disconnections = b; }
+    // ------------------------------------------------------------------------
+    /** Return true if this protocol should be informed about connects. */
+    virtual bool handleConnects() const { return m_handle_connections; }
+    // ------------------------------------------------------------------------
+    /** Return true if this protocol should be informed about disconnects. */
+    virtual bool handleDisconnects() const { return m_handle_disconnections; }
 
 };   // class Protocol
 
