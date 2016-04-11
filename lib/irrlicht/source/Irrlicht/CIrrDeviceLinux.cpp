@@ -66,6 +66,7 @@ namespace irr
 	}
 } // end namespace irr
 
+#if defined(_IRR_COMPILE_WITH_X11_)
 namespace
 {
 	Atom X_ATOM_CLIPBOARD;
@@ -73,6 +74,7 @@ namespace
 	Atom X_ATOM_UTF8_STRING;
 	Atom X_ATOM_TEXT;
 };
+#endif
 
 namespace irr
 {
@@ -506,6 +508,8 @@ void IrrPrintXGrabError(int grabResult, const c8 * grabCommand )
 }
 #endif
 
+#ifdef _IRR_COMPILE_WITH_OPENGL_
+
 static GLXContext getMeAGLContext(Display *display, GLXFBConfig glxFBConfig, bool force_legacy_context)
 {
 	GLXContext Context;
@@ -590,6 +594,8 @@ static GLXContext getMeAGLContext(Display *display, GLXFBConfig glxFBConfig, boo
 	Context = glXCreateNewContext(display, glxFBConfig, GLX_RGBA_TYPE, NULL, True);
 	return Context;
 }
+
+#endif
 
 bool CIrrDeviceLinux::createWindow()
 {
