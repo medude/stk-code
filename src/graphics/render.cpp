@@ -18,6 +18,8 @@
 
 #include "graphics/irr_driver.hpp"
 
+#ifndef SERVER_ONLY
+
 #include "config/user_config.hpp"
 #include "graphics/callbacks.hpp"
 #include "graphics/central_settings.hpp"
@@ -717,3 +719,5 @@ void IrrDriver::renderGlow(std::vector<GlowData>& glows)
     m_post_processing->renderGlow(m_rtts->getRenderTarget(RTT_QUARTER1));
     glDisable(GL_STENCIL_TEST);
 }
+
+#endif   // SERVER_ONLY

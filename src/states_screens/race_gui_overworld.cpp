@@ -26,6 +26,7 @@
 #include "graphics/camera.hpp"
 #include "graphics/2dutils.hpp"
 #include "graphics/glwrap.hpp"
+#include "graphics/irr_driver.hpp"
 #include "graphics/material_manager.hpp"
 #include "guiengine/engine.hpp"
 #include "guiengine/modaldialog.hpp"
@@ -293,6 +294,7 @@ void RaceGUIOverworld::drawTrophyPoints()
  */
 void RaceGUIOverworld::drawGlobalMiniMap()
 {
+#ifndef SERVER_ONLY
     World *world = World::getWorld();
     // arenas currently don't have a map.
     if(world->getTrack()->isArena() || world->getTrack()->isSoccer()) return;
@@ -541,7 +543,7 @@ void RaceGUIOverworld::drawGlobalMiniMap()
                                        true, true /* vcenter */, NULL);
         }
     }
-
+#endif   // SERVER_ONLY
 }   // drawGlobalMiniMap
 
 //-----------------------------------------------------------------------------

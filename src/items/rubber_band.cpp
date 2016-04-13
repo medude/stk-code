@@ -68,10 +68,12 @@ RubberBand::RubberBand(Plunger *plunger, AbstractKart *kart)
         verts[i].Color = color;
     }
 
+#ifndef SERVER_ONLY
     // Color
     mb->getMaterial().setTexture(0, getUnicolorTexture(video::SColor(255, 255, 255, 255)));
     // Gloss
     mb->getMaterial().setTexture(1, getUnicolorTexture(video::SColor(0, 0, 0, 0)));
+#endif
     updatePosition();
     m_node = irr_driver->addMesh(m_mesh, "rubberband");
     irr_driver->applyObjectPassShader(m_node);

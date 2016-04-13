@@ -19,6 +19,8 @@
 // Not really a scene manager yet but hold algorithm that
 // rework scene manager output
 
+#ifndef SERVER_ONLY
+
 #ifndef HEADER_STKSCENEMANAGER_HPP
 #define HEADER_STKSCENEMANAGER_HPP
 
@@ -87,3 +89,5 @@ public:
 
 
 #endif
+
+#endif   // supertuxkart

@@ -708,6 +708,7 @@ void  Material::setMaterialProperties(video::SMaterial *m, scene::IMeshBuffer* m
                   m_texname.c_str());
     }
 
+#ifndef SERVER_ONLY
     if (CVS->isGLSL())
     {
         ITexture *tex;
@@ -825,7 +826,7 @@ void  Material::setMaterialProperties(video::SMaterial *m, scene::IMeshBuffer* m
         }
         m->setTexture(1, glossytex);
     }
-
+#endif
 
     if (m_shader_type == SHADERTYPE_SOLID_UNLIT)
     {

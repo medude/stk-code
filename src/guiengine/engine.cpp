@@ -660,6 +660,7 @@ namespace GUIEngine
 #include "graphics/2dutils.hpp"
 #include "input/input_manager.hpp"
 #include "io/file_manager.hpp"
+#include "graphics/irr_driver.hpp"
 #include "guiengine/event_handler.hpp"
 #include "guiengine/modaldialog.hpp"
 #include "guiengine/message_queue.hpp"

@@ -28,6 +28,7 @@ using namespace irr;
 #include "graphics/camera.hpp"
 #include "graphics/2dutils.hpp"
 #include "graphics/glwrap.hpp"
+#include "graphics/irr_driver.hpp"
 #include "graphics/material_manager.hpp"
 #include "guiengine/engine.hpp"
 #include "guiengine/modaldialog.hpp"
@@ -335,6 +336,7 @@ void RaceGUI::drawGlobalTimer()
  */
 void RaceGUI::drawGlobalMiniMap()
 {
+#ifndef SERVER_ONLY
     World *world = World::getWorld();
     // draw a map when arena has a navigation mesh.
     if ((world->getTrack()->isArena() || world->getTrack()->isSoccer()) &&
@@ -403,7 +405,7 @@ void RaceGUI::drawGlobalMiniMap()
                                  lower_y   -(int)(draw_at.getY()-(m_minimap_ai_size>>2)));
         draw2DImage(icon, position, source, NULL, NULL, true);
     }
-
+#endif
 }   // drawGlobalMiniMap
 
 //-----------------------------------------------------------------------------

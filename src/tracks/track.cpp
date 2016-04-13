@@ -279,11 +279,13 @@ void Track::cleanup()
     QuadGraph::destroy();
     BattleGraph::destroy();
     ItemManager::destroy();
+#ifndef SERVER_ONLY
     VAOManager::kill();
-
     ParticleKindManager::get()->cleanUpTrackSpecificGfx();
     // Clear reminder of transformed textures
     resetTextureTable();
+#endif
+
     // Clear reminder of the link between textures and file names.
     irr_driver->clearTexturesFileName();
 
@@ -774,10 +776,14 @@ void Track::createPhysicsModel(unsigned int main_track_count)
             }
 
             // Color
+#ifndef SERVER_ONLY
             mb->getMaterial().setTexture(0, getUnicolorTexture(video::SColor(255, 255, 105, 180)));
+#endif
             irr_driver->grabAllTextures(mesh);
             // Gloss
+#ifndef SERVER_ONLY
             mb->getMaterial().setTexture(1, getUnicolorTexture(video::SColor(0, 0, 0, 0)));
+#endif
         }
         else
             irr_driver->removeNode(m_static_physics_only_nodes[i]);
@@ -1026,6 +1032,7 @@ void Track::convertTrackToBullet(scene::ISceneNode *node)
 
 void Track::loadMinimap()
 {
+#ifndef SERVER_ONLY
     //Check whether the hardware can do nonsquare or
     // non power-of-two textures
     video::IVideoDriver* const video_driver = irr_driver->getVideoDriver();
@@ -1064,6 +1071,7 @@ void Track::loadMinimap()
         m_minimap_x_scale = 0;
         m_minimap_y_scale = 0;
     }
+#endif
 }   // loadMinimap
 
 // ----------------------------------------------------------------------------

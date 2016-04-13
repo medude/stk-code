@@ -228,7 +228,9 @@ bool handleContextMenuAction(s32 cmdID)
     if (cmdID == DEBUG_GRAPHICS_RELOAD_SHADERS)
     {
         Log::info("Debug", "Reloading shaders...");
+#ifndef SERVER_ONLY
         ShaderBase::updateShaders();
+#endif
     }
     else if (cmdID == DEBUG_GRAPHICS_RESET)
     {

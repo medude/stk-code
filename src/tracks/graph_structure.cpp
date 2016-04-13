@@ -105,8 +105,10 @@ void GraphStructure::createMesh(bool show_invisible,
     m.Lighting         = false;
     if (enable_transparency)
         m.MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
+#ifndef SERVER_ONLY
     m.setTexture(0, getUnicolorTexture(video::SColor(255, 255, 255, 255)));
     m.setTexture(1, getUnicolorTexture(video::SColor(0, 0, 0, 0)));
+#endif
     m_mesh             = irr_driver->createQuadMesh(&m);
     m_mesh_buffer      = m_mesh->getMeshBuffer(0);
     assert(m_mesh_buffer->getVertexType()==video::EVT_STANDARD);
@@ -242,6 +244,7 @@ void GraphStructure::makeMiniMap(const core::dimension2du &dimension,
                             video::ITexture** oldRttMinimap,
                             FrameBuffer** newRttMinimap)
 {
+#ifndef SERVER_ONLY
     const video::SColor oldClearColor = World::getWorld()->getClearColor();
     World::getWorld()->setClearbackBufferColor(video::SColor(0, 255, 255, 255));
     World::getWorld()->forceFogDisabled(true);
@@ -367,6 +370,7 @@ void GraphStructure::makeMiniMap(const core::dimension2du &dimension,
     irr_driver->clearLights();
     irr_driver->clearForcedBloom();
     irr_driver->clearBackgroundNodes();
+#endif
 }   // makeMiniMap
 
 // -----------------------------------------------------------------------------

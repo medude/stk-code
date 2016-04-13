@@ -1959,6 +1959,7 @@ void Skin::process3DPane(IGUIElement *element, const core::recti &rect,
     {
         ModelViewWidget* mvw = dynamic_cast<ModelViewWidget*>(widget);
         FrameBuffer* fb = mvw->getFrameBuffer();
+#ifndef SERVER_ONLY
         if (fb != NULL && fb->getRTT().size() > 0)
         {
             glEnable(GL_FRAMEBUFFER_SRGB);
@@ -1966,6 +1967,7 @@ void Skin::process3DPane(IGUIElement *element, const core::recti &rect,
                 rect, core::rect<s32>(0, 0, 512, 512), NULL, SColor(255, 255, 255, 255), true);
             glDisable(GL_FRAMEBUFFER_SRGB);
         }
+#endif
     }
     else if (type == WTYPE_ICON_BUTTON || type == WTYPE_MODEL_VIEW)
     {

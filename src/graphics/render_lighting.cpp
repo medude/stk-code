@@ -15,6 +15,8 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#ifndef SERVER_ONLY
+
 
 #include "config/user_config.hpp"
 #include "graphics/callbacks.hpp"
@@ -622,3 +624,6 @@ void IrrDriver::renderLightsScatter(unsigned pointlightcount)
                                          getFBO(FBO_COLORS).getWidth(),
                                          getFBO(FBO_COLORS).getHeight());
 }   // renderLightsScatter
+
+#endif    // !SERVER_ONLY
+

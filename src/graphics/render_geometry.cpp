@@ -15,6 +15,8 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#ifndef SERVER_ONLY
+
 #include "graphics/irr_driver.hpp"
 
 #include "config/user_config.hpp"
@@ -1959,4 +1961,6 @@ void IrrDriver::renderRSM()
         renderRSMShadow<DetailMat>(rsm_matrix);
     }
     getShadowMatrices()->setRSMMapAvail(true);
-}   // renderRSM
+
+
+#endif   // SERVER_ONLY

@@ -94,7 +94,9 @@ using namespace irr;
 /** singleton */
 IrrDriver *irr_driver = NULL;
 
+#ifndef SERVER_ONLY
 GPUTimer          m_perf_query[Q_LAST];
+#endif
 
 const int MIN_SUPPORTED_HEIGHT = 768;
 const int MIN_SUPPORTED_WIDTH  = 1024;
@@ -161,10 +163,12 @@ IrrDriver::~IrrDriver()
 
     delete m_shadow_matrices;
     m_shadow_matrices = NULL;
+#ifndef SERVER_ONLY
     if (CVS->isGLSL())
     {
         Shaders::destroy();
     }
+#endif
     delete m_wind;
     delete m_spherical_harmonics;
 }   // ~IrrDriver
@@ -201,11 +205,12 @@ core::array<video::IRenderTarget> &IrrDriver::getMainSetup()
 {
   return m_mrt;
 }
-
+#ifndef SERVER_ONLY
 GPUTimer &IrrDriver::getGPUTimer(unsigned i)
 {
     return m_perf_query[i];
 }
+#endif
 
 // ----------------------------------------------------------------------------
 void IrrDriver::computeMatrixesAndCameras(scene::ICameraSceneNode *const camnode,
@@ -573,6 +578,8 @@ void IrrDriver::initDevice()
         UserConfigParams::m_gi = false;
     }*/
 
+#ifndef SERVER_ONLY
+
     // m_glsl might be reset in rtt if an error occurs.
     if (CVS->isGLSL())
     {
@@ -587,6 +594,7 @@ void IrrDriver::initDevice()
         Log::warn("irr_driver", "Using the fixed pipeline (old GPU, or "
                                 "shaders disabled in options)");
     }
+#endif
 
     // Only change video driver settings if we are showing graphics
     if (!ProfileWorld::isNoGraphics())
@@ -677,10 +685,12 @@ void IrrDriver::createSunInterposer()
         scene::IMeshBuffer *mb = sphere->getMeshBuffer(i);
         if (!mb)
             continue;
+#ifndef SERVER_ONLY
         mb->getMaterial().setTexture(0, 
                         getUnicolorTexture(video::SColor(255, 255, 255, 255)));
         mb->getMaterial().setTexture(1,
                                 getUnicolorTexture(video::SColor(0, 0, 0, 0)));
+#endif
     }
     m_sun_interposer = new STKMeshSceneNode(sphere, 
                                             m_scene_manager->getRootSceneNode(),
@@ -693,7 +703,9 @@ void IrrDriver::createSunInterposer()
     m_sun_interposer->getMaterial(0).Lighting = false;
     m_sun_interposer->getMaterial(0).ColorMask = video::ECP_NONE;
     m_sun_interposer->getMaterial(0).ZWriteEnable = false;
+#ifndef SERVER_ONLY
     m_sun_interposer->getMaterial(0).MaterialType = Shaders::getShader(ES_OBJECTPASS);
+#endif
 
     sphere->drop();
 }
@@ -702,9 +714,11 @@ void IrrDriver::createSunInterposer()
 void IrrDriver::getOpenGLData(std::string *vendor, std::string *renderer,
                               std::string *version)
 {
+#ifndef SERVER_ONLY
     *vendor   = (char*)glGetString(GL_VENDOR  );
     *renderer = (char*)glGetString(GL_RENDERER);
     *version  = (char*)glGetString(GL_VERSION );
+#endif
 }   // getOpenGLData
 
 //-----------------------------------------------------------------------------
@@ -815,6 +829,7 @@ void IrrDriver::changeResolution(const int w, const int h,
 
 void IrrDriver::applyResolutionSettings()
 {
+#ifndef SERVER_ONLY
     // show black before resolution switch so we don't see OpenGL's buffer
     // garbage during switch
     m_video_driver->beginScene(true, true, video::SColor(255,100,101,140));
@@ -900,6 +915,7 @@ void IrrDriver::applyResolutionSettings()
     // above) - this happens dynamically when the tracks are loaded.
     GUIEngine::reshowCurrentScreen();
     MessageQueue::updatePosition();
+#endif   // !SERVER_ONLY
 }   // applyResolutionSettings
 
 // ----------------------------------------------------------------------------
@@ -1139,9 +1155,10 @@ scene::IMeshSceneNode *IrrDriver::addSphere(float radius,
     m.EmissiveColor   = color;
     m.BackfaceCulling = false;
     m.MaterialType    = video::EMT_SOLID;
+#ifndef SERVER_ONLY
     m.setTexture(0, getUnicolorTexture(video::SColor(128, 255, 105, 180)));
     m.setTexture(1, getUnicolorTexture(video::SColor(0, 0, 0, 0)));
-
+#endif
     if (CVS->isGLSL())
     {
         STKMeshSceneNode *node =
@@ -2495,7 +2512,7 @@ video::ITexture* IrrDriver::RTTProvider::renderToTexture(float angle,
 }
 
 // ----------------------------------------------------------------------------
-
+#ifndef SERVER_ONLY
 void IrrDriver::applyObjectPassShader(scene::ISceneNode * const node, bool rimlit)
 {
     if (!CVS->isGLSL())
@@ -2573,6 +2590,8 @@ void IrrDriver::applyObjectPassShader()
     applyObjectPassShader(m_scene_manager->getRootSceneNode());
 }
 
+#endif   // !SERVER_ONLY
+
 // ----------------------------------------------------------------------------
 
 scene::ISceneNode *IrrDriver::addLight(const core::vector3df &pos,
@@ -2580,6 +2599,7 @@ scene::ISceneNode *IrrDriver::addLight(const core::vector3df &pos,
                                        float r, float g, float b,
                                        bool sun, scene::ISceneNode* parent)
 {
+#ifndef SERVER_ONLY
     if (CVS->isGLSL())
     {
         if (parent == NULL) parent = m_scene_manager->getRootSceneNode();
@@ -2616,6 +2636,9 @@ scene::ISceneNode *IrrDriver::addLight(const core::vector3df &pos,
                ->addLightSceneNode(m_scene_manager->getRootSceneNode(),
                                    pos, video::SColorf(1.0f, r, g, b));
     }
+#else
+    return NULL;
+#endif
 }   // addLight
 
 // ----------------------------------------------------------------------------
