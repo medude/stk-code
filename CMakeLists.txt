@@ -72,11 +72,12 @@ include_directories("${PROJECT_SOURCE_DIR}/lib/bullet/src")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/enet")
 include_directories("${PROJECT_SOURCE_DIR}/lib/enet/include")
 
-#if(NOT (SERVER_ONLY) )
+if(NOT (SERVER_ONLY) )
     # Build glew library
     add_subdirectory("${PROJECT_SOURCE_DIR}/lib/glew")
     include_directories("${PROJECT_SOURCE_DIR}/lib/glew/include")
-#endif()
+    set(MY_GLEW_LIBRARIES glew)
+endif()
 
 if((WIN32 AND NOT MINGW) OR APPLE)
     if (NOT APPLE)
@@ -352,7 +353,7 @@ target_link_libraries(supertuxkart
     bulletcollision
     bulletmath
     enet
-    glew
+    ${MY_GLEW_LIBRARIES}
     stkirrlicht
     ${Angelscript_LIBRARIES}
     ${CURL_LIBRARIES}
