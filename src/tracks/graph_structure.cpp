@@ -45,11 +45,13 @@ GraphStructure::GraphStructure()
 
 void GraphStructure::destroyRTT()
 {
+#ifndef SERVER_ONLY
     if (m_new_rtt != NULL)
     {
         delete m_new_rtt;
         m_new_rtt = NULL;
     }
+#endif
 }  // destroyRTT
 
 // -----------------------------------------------------------------------------

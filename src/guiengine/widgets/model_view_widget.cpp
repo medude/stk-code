@@ -56,9 +56,10 @@ IconButtonWidget(IconButtonWidget::SCALE_MODE_KEEP_TEXTURE_ASPECT_RATIO, false, 
 ModelViewWidget::~ModelViewWidget()
 {
     GUIEngine::needsUpdate.remove(this);
-    
+#ifndef SERVER_ONLY    
     delete m_rtt_provider;
     m_rtt_provider = NULL;
+#endif
 }
 // -----------------------------------------------------------------------------
 void ModelViewWidget::add()
@@ -158,7 +159,10 @@ void ModelViewWidget::update(float delta)
         // stop rotating when target reached
         if (fabsf(angle - m_rotation_target) < 2.0f) m_rotation_mode = ROTATE_OFF;
     }
-    
+   
+#ifdef SERVER_ONLY 
+    return;
+#else
     if (!CVS->isGLSL())
         return;
     
@@ -182,13 +186,16 @@ void ModelViewWidget::update(float delta)
     m_frame_buffer = m_rtt_provider->render(m_camera, GUIEngine::getLatestDt());
 
     m_rtt_main_node->setVisible(false);
+#endif
 }
 
+// ------------------------------------------------------------------------------
 void ModelViewWidget::setupRTTScene(PtrVector<scene::IMesh, REF>& mesh,
                                     AlignedArray<Vec3>& mesh_location,
                                     AlignedArray<Vec3>& mesh_scale,
                                     const std::vector<int>& model_frames)
 {
+#ifndef SERVER_ONLY
     irr_driver->suppressSkyBox();
     
     if (m_rtt_main_node != NULL) m_rtt_main_node->remove();
@@ -283,6 +290,7 @@ void ModelViewWidget::setupRTTScene(PtrVector<scene::IMesh, REF>& mesh,
     m_camera->updateAbsolutePosition();
 
     m_rtt_provider->prepareRender(m_camera);
+#endif
 }
 
 void ModelViewWidget::setRotateOff()
@@ -308,13 +316,18 @@ bool ModelViewWidget::isRotating()
 
 void ModelViewWidget::elementRemoved()
 {
+#ifndef SERVER_ONLY
     delete m_rtt_provider;
     m_rtt_provider = NULL;
     IconButtonWidget::elementRemoved();
+#endif
 }
 
 void ModelViewWidget::clearRttProvider()
 {
+#ifndef SERVER_ONLY
     delete m_rtt_provider;
     m_rtt_provider = NULL;
+#endif
 }
+

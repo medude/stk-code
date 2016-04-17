@@ -94,7 +94,7 @@ namespace Scripting
             assert(GUIEngine::getHighresDigitFont() != NULL);
 
             core::vector3df xyz(location->getX(), location->getY(), location->getZ());
-
+#ifndef SERVER_ONLY
             if (CVS->isGLSL())
             {
                 gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
@@ -122,6 +122,7 @@ namespace Scripting
                     GUIEngine::getSkin()->getColor("font::top"));
                 World::getWorld()->getTrack()->addNode(sn);
             }
+#endif
         }
 
         /** Exits the race to the main menu */

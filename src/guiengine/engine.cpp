@@ -1177,6 +1177,7 @@ namespace GUIEngine
 
     void render(float elapsed_time)
     {
+#ifndef SERVER_ONLY
         GUIEngine::dt = elapsed_time;
 
         // Not yet initialized, or already cleaned up
@@ -1300,7 +1301,7 @@ namespace GUIEngine
             DemoWorld::resetIdleTime();
         }
 
-
+#endif
     }   // render
 
     // -----------------------------------------------------------------------
@@ -1308,6 +1309,7 @@ namespace GUIEngine
 
     void renderLoading(bool clearIcons)
     {
+#ifndef SERVER_ONLY
         if (clearIcons) g_loading_icons.clear();
 
         g_skin->drawBgImage();
@@ -1371,7 +1373,7 @@ namespace GUIEngine
                 x = ICON_MARGIN;
             }
         }
-
+#endif
     } // renderLoading
 
     // -----------------------------------------------------------------------

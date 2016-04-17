@@ -674,6 +674,7 @@ void RaceResultGUI::backToLobby()
      */
     void RaceResultGUI::renderGlobal(float dt)
     {
+#ifndef SERVER_ONLY
         bool isSoccerWorld = race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER;
 
         m_timer += dt;
@@ -845,6 +846,7 @@ void RaceResultGUI::backToLobby()
         {
             displayHighScores();
         }
+#endif
     }   // renderGlobal
 
     //-----------------------------------------------------------------------------
@@ -853,6 +855,7 @@ void RaceResultGUI::backToLobby()
      */
     void RaceResultGUI::determineGPLayout()
     {
+#ifndef SERVER_ONLY
         unsigned int num_karts = race_manager->getNumberOfKarts();
         std::vector<int> old_rank(num_karts, 0);
         for (unsigned int kart_id = 0; kart_id < num_karts; kart_id++)
@@ -923,6 +926,7 @@ void RaceResultGUI::backToLobby()
             int p = race_manager->getKartScore(i);
             ri->m_new_overall_points = p;
         }   // i < num_karts
+#endif
     }   // determineGPLayout
 
     //-----------------------------------------------------------------------------
@@ -933,6 +937,7 @@ void RaceResultGUI::backToLobby()
     void RaceResultGUI::displayOneEntry(unsigned int x, unsigned int y,
         unsigned int n, bool display_points)
     {
+#ifndef SERVER_ONLY
         RowInfo *ri = &(m_all_row_infos[n]);
         video::SColor color = ri->m_is_player_kart
             ? video::SColor(255, 255, 0, 0)
@@ -1003,12 +1008,13 @@ void RaceResultGUI::backToLobby()
             m_font->draw(point_inc_string, dest_rect, color, false, false, NULL,
                 true /* ignoreRTL */);
         }
+#endif
     }   // displayOneEntry
 
     //-----------------------------------------------------------------------------
     void RaceResultGUI::displaySoccerResults()
     {
-
+#ifndef SERVER_ONLY
         //Draw win text
         core::stringw result_text;
         static video::SColor color = video::SColor(255, 255, 255, 255);
@@ -1176,6 +1182,7 @@ void RaceResultGUI::backToLobby()
             draw2DImage(scorer_icon, dest_rect, source_rect,
                 NULL, NULL, true);
         }
+#endif
     }
 
     //-----------------------------------------------------------------------------
@@ -1323,6 +1330,7 @@ void RaceResultGUI::backToLobby()
     // ----------------------------------------------------------------------------
     void RaceResultGUI::displayHighScores()
     {
+#ifndef SERVER_ONLY
         // This happens in demo world
         if (!World::getWorld())
             return;
@@ -1409,6 +1417,7 @@ void RaceResultGUI::backToLobby()
                     false, false, NULL, true /* ignoreRTL */);
             }
         }
+#endif
     }
 
     // ----------------------------------------------------------------------------

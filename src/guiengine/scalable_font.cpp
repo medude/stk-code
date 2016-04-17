@@ -782,6 +782,7 @@ void ScalableFont::doDraw(const core::stringw& text,
                           const core::rect<s32>* clip,
                           FontCharCollector* charCollector)
 {
+#ifndef SERVER_ONLY
     if (!m_video_driver) return;
 
     GUIEngine::GlyphPageCreator* gp_creator = GUIEngine::getGlyphPageCreator();
@@ -1055,6 +1056,7 @@ void ScalableFont::doDraw(const core::stringw& text,
             }
         }
     }
+#endif   // !SERVER_ONLY
 }
 
 // ----------------------------------------------------------------------------

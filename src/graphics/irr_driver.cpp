@@ -178,7 +178,9 @@ IrrDriver::~IrrDriver()
  */
 void IrrDriver::reset()
 {
+#ifndef SERVER_ONLY
     if (CVS->isGLSL()) m_post_processing->reset();
+#endif
 }   // reset
 
 void IrrDriver::setPhase(STKRenderingPass p)
@@ -217,7 +219,9 @@ void IrrDriver::computeMatrixesAndCameras(scene::ICameraSceneNode *const camnode
                                           size_t width, size_t height)
 {
     m_current_screen_size = core::vector2df(float(width), float(height));
+#ifndef SERVER_ONLY
     m_shadow_matrices->computeMatrixesAndCameras(camnode, width, height);
+#endif
 }   // computeMatrixesAndCameras
 
 // ----------------------------------------------------------------------------
@@ -230,6 +234,7 @@ If window is the root window, returns window.
 */
 Window get_toplevel_parent(Display* display, Window window)
 {
+#ifndef SERVER_ONLY
      Window parent;
      Window root;
      Window * children;
@@ -252,6 +257,9 @@ Window get_toplevel_parent(Display* display, Window window)
              window = parent;
          }
      }
+#else
+    return NULL;
+#endif
 }
 #endif
 
@@ -262,8 +270,9 @@ Window get_toplevel_parent(Display* display, Window window)
  */
 void IrrDriver::updateConfigIfRelevant()
 {
-        if (!UserConfigParams::m_fullscreen &&
-             UserConfigParams::m_remember_window_location)
+#ifndef SERVER_ONLY
+    if (!UserConfigParams::m_fullscreen &&
+         UserConfigParams::m_remember_window_location)
     {
 #ifdef WIN32
         const video::SExposedVideoData& videoData = m_device->getVideoDriver()
@@ -315,6 +324,8 @@ void IrrDriver::updateConfigIfRelevant()
         }
 #endif
     }
+
+#endif   // !SERVER_ONLY
 }   // updateConfigIfRelevant
 
 // ----------------------------------------------------------------------------
@@ -515,14 +526,16 @@ void IrrDriver::initDevice()
     {
         Log::fatal("irr_driver", "Couldn't initialise irrlicht device. Quitting.\n");
     }
-    
+#ifndef SERVER_ONLY 
     CVS->init();
+#endif
                     
     // This is the ugly hack for intel driver on linux, which doesn't
     // use sRGB-capable visual, even if we request it. This causes
     // the screen to be darker than expected. It affects mesa 10.6 and newer. 
     // Though we are able to force to use the proper format on mesa side by 
     // setting WithAlphaChannel parameter.
+#ifndef SERVER_ONLY
     if (!ProfileWorld::isNoGraphics() && CVS->needsSRGBCapableVisualWorkaround())
     {
         Log::warn("irr_driver", "Created visual is not sRGB-capable. "
@@ -539,6 +552,7 @@ void IrrDriver::initDevice()
             Log::fatal("irr_driver", "Couldn't initialise irrlicht device. Quitting.\n");
         }
     }
+#endif
 
     m_scene_manager = m_device->getSceneManager();
     m_gui_env       = m_device->getGUIEnvironment();
@@ -546,8 +560,9 @@ void IrrDriver::initDevice()
     m_sync = 0;
 
     m_actual_screen_size = m_video_driver->getCurrentRenderTargetSize();
-
+#ifndef SERVER_ONLY
     m_spherical_harmonics = new SphericalHarmonics(m_scene_manager->getAmbientLight().toSColor());
+#endif
 
     if (UserConfigParams::m_shadows_resolution != 0 &&
         (UserConfigParams::m_shadows_resolution < 512 ||
@@ -566,6 +581,7 @@ void IrrDriver::initDevice()
     m_video_driver->beginScene(/*backBuffer clear*/true, /* Z */ false);
     m_video_driver->endScene();
 
+#ifndef SERVER_ONLY
     if (CVS->isGLSL())
     {
         Log::info("irr_driver", "GLSL supported.");
@@ -578,7 +594,6 @@ void IrrDriver::initDevice()
         UserConfigParams::m_gi = false;
     }*/
 
-#ifndef SERVER_ONLY
 
     // m_glsl might be reset in rtt if an error occurs.
     if (CVS->isGLSL())
@@ -599,7 +614,7 @@ void IrrDriver::initDevice()
     // Only change video driver settings if we are showing graphics
     if (!ProfileWorld::isNoGraphics())
     {
-#if defined(__linux__) && !defined(ANDROID)
+#if defined(__linux__) && !defined(ANDROID) && !defined(SERVER_ONLY)
         // Set class hints on Linux, used by Window Managers.
         const video::SExposedVideoData& videoData = m_video_driver
                                                 ->getExposedVideoData();
@@ -649,6 +664,7 @@ void IrrDriver::initDevice()
     material2D.AntiAliasing=video::EAAM_FULL_BASIC;
     //m_video_driver->enableMaterial2D();
 
+#ifndef SERVER_ONLY
     // Initialize post-processing if supported
     m_post_processing = new PostProcessing(m_video_driver);
 
@@ -657,6 +673,10 @@ void IrrDriver::initDevice()
     m_device->getCursorControl()->setVisible(true);
     m_pointer_shown = true;
     m_shadow_matrices = new ShadowMatrices();
+#else
+    m_post_processing = NULL;
+    m_shadow_matrices = NULL;
+#endif
 }   // initDevice
 
 // ----------------------------------------------------------------------------
@@ -678,6 +698,7 @@ void IrrDriver::cleanSunInterposer()
 // ----------------------------------------------------------------------------
 void IrrDriver::createSunInterposer()
 {
+#ifndef SERVER_ONLY
     scene::IMesh * sphere = m_scene_manager->getGeometryCreator()
                                            ->createSphereMesh(1, 16, 16);
     for (unsigned i = 0; i < sphere->getMeshBufferCount(); ++i)
@@ -685,12 +706,10 @@ void IrrDriver::createSunInterposer()
         scene::IMeshBuffer *mb = sphere->getMeshBuffer(i);
         if (!mb)
             continue;
-#ifndef SERVER_ONLY
         mb->getMaterial().setTexture(0, 
                         getUnicolorTexture(video::SColor(255, 255, 255, 255)));
         mb->getMaterial().setTexture(1,
                                 getUnicolorTexture(video::SColor(0, 0, 0, 0)));
-#endif
     }
     m_sun_interposer = new STKMeshSceneNode(sphere, 
                                             m_scene_manager->getRootSceneNode(),
@@ -703,11 +722,10 @@ void IrrDriver::createSunInterposer()
     m_sun_interposer->getMaterial(0).Lighting = false;
     m_sun_interposer->getMaterial(0).ColorMask = video::ECP_NONE;
     m_sun_interposer->getMaterial(0).ZWriteEnable = false;
-#ifndef SERVER_ONLY
     m_sun_interposer->getMaterial(0).MaterialType = Shaders::getShader(ES_OBJECTPASS);
-#endif
 
     sphere->drop();
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -762,6 +780,7 @@ core::position2di IrrDriver::getMouseLocation()
  */
 bool IrrDriver::moveWindow(int x, int y)
 {
+#ifndef SERVER_ONLY
 #ifdef WIN32
     const video::SExposedVideoData& videoData =
                     m_video_driver->getExposedVideoData();
@@ -800,6 +819,7 @@ bool IrrDriver::moveWindow(int x, int y)
 
     // TODO: Actually handle possible failure
     XMoveWindow(display, videoData.OpenGLLinux.X11Window, x, y);
+#endif
 #endif
     return true;
 }
@@ -1158,7 +1178,6 @@ scene::IMeshSceneNode *IrrDriver::addSphere(float radius,
 #ifndef SERVER_ONLY
     m.setTexture(0, getUnicolorTexture(video::SColor(128, 255, 105, 180)));
     m.setTexture(1, getUnicolorTexture(video::SColor(0, 0, 0, 0)));
-#endif
     if (CVS->isGLSL())
     {
         STKMeshSceneNode *node =
@@ -1167,6 +1186,7 @@ scene::IMeshSceneNode *IrrDriver::addSphere(float radius,
                                 NULL, -1, "sphere");
         return node;
     }
+#endif
 
     scene::IMeshSceneNode *node = m_scene_manager->addMeshSceneNode(mesh);
     return node;
@@ -1189,6 +1209,9 @@ scene::IMeshSceneNode *IrrDriver::addMesh(scene::IMesh *mesh,
                                           const std::string& debug_name,
                                           scene::ISceneNode *parent)
 {
+#ifdef SERVER_ONLY
+    return m_scene_manager->addMeshSceneNode(mesh, parent);
+#else
     if (!CVS->isGLSL())
         return m_scene_manager->addMeshSceneNode(mesh, parent);
 
@@ -1201,6 +1224,7 @@ scene::IMeshSceneNode *IrrDriver::addMesh(scene::IMesh *mesh,
     node->drop();
 
     return node;
+#endif
 }   // addMesh
 
 // ----------------------------------------------------------------------------
@@ -1224,6 +1248,7 @@ scene::ISceneNode *IrrDriver::addBillboard(const core::dimension2d< f32 > size,
                                            bool alphaTesting)
 {
     scene::IBillboardSceneNode* node;
+#ifndef SERVER_ONLY
     if (CVS->isGLSL())
     {
         if (!parent)
@@ -1234,13 +1259,14 @@ scene::ISceneNode *IrrDriver::addBillboard(const core::dimension2d< f32 > size,
         node->drop();
     }
     else
+#endif
         node = m_scene_manager->addBillboardSceneNode(parent, size);
     assert(node->getMaterialCount() > 0);
     node->setMaterialTexture(0, texture);
     if(alphaTesting)
         node->setMaterialType(video::EMT_TRANSPARENT_ALPHA_CHANNEL_REF);
     return node;
-}   // addMesh
+}   // addBillboard
 
 // ----------------------------------------------------------------------------
 /** Creates a quad mesh with a given material.
@@ -1381,13 +1407,16 @@ void IrrDriver::removeTexture(video::ITexture *t)
 scene::IAnimatedMeshSceneNode *IrrDriver::addAnimatedMesh(scene::IAnimatedMesh *mesh,
     const std::string& debug_name, scene::ISceneNode* parent)
 {
+#ifndef SERVER_ONLY
     if (!CVS->isGLSL())
     {
+#endif
         return m_scene_manager->addAnimatedMeshSceneNode(mesh, parent, -1,
             core::vector3df(0, 0, 0),
             core::vector3df(0, 0, 0),
             core::vector3df(1, 1, 1),
             /*addIfMeshIsZero*/true);
+#ifndef SERVER_ONLY
     }
 
     if (!parent)
@@ -1397,6 +1426,7 @@ scene::IAnimatedMeshSceneNode *IrrDriver::addAnimatedMesh(scene::IAnimatedMesh *
         core::vector3df(0, 0, 0), core::vector3df(0, 0, 0), core::vector3df(1, 1, 1));
     node->drop();
     return node;
+#endif
 }   // addAnimatedMesh
 
 // ----------------------------------------------------------------------------
@@ -1437,6 +1467,7 @@ scene::ISceneNode *IrrDriver::addSkyDome(video::ITexture *texture,
 scene::ISceneNode *IrrDriver::addSkyBox(const std::vector<video::ITexture*> &texture,
     const std::vector<video::ITexture*> &spherical_harmonics_textures)
 {
+#ifndef SERVER_ONLY
     assert(texture.size() == 6);
 
     if (CVS->isGLSL())
@@ -1448,17 +1479,20 @@ scene::ISceneNode *IrrDriver::addSkyBox(const std::vector<video::ITexture*> &tex
     {
         m_spherical_harmonics->setTextures(spherical_harmonics_textures);
     }
-    
+#endif 
     return m_scene_manager->addSkyBoxSceneNode(texture[0], texture[1],
                                                texture[2], texture[3],
                                                texture[4], texture[5]);
 }   // addSkyBox
 
+// ----------------------------------------------------------------------------
 void IrrDriver::suppressSkyBox()
 {
+#ifndef SERVER_ONLY
     delete m_skybox;
+#endif
     m_skybox = NULL;
-}
+}   // suppressSkyBox
 
 // ----------------------------------------------------------------------------
 /** Adds a camera to the scene.
@@ -1814,6 +1848,7 @@ void IrrDriver::setRTT(RTT* rtt)
 // ----------------------------------------------------------------------------
 void IrrDriver::onLoadWorld()
 {
+#ifndef SERVER_ONLY
     if (CVS->isGLSL())
     {
         const core::recti &viewport = Camera::getCamera(0)->getViewport();
@@ -1821,23 +1856,29 @@ void IrrDriver::onLoadWorld()
         size_t height = viewport.LowerRightCorner.Y - viewport.UpperLeftCorner.Y;
         m_rtts = new RTT(width, height);
     }
-}
+#endif
+}   // onLoadWorld
 // ----------------------------------------------------------------------------
 void IrrDriver::onUnloadWorld()
 {
+#ifndef SERVER_ONLY
     delete m_rtts;
     m_rtts = NULL;
 
     suppressSkyBox();
-}
+#endif
+}   // onUnloadWorld
+
 // ----------------------------------------------------------------------------
 /** Sets the ambient light.
  *  \param light The colour of the light to set.
  */
 void IrrDriver::setAmbientLight(const video::SColorf &light)
 {
+#ifndef SERVER_ONLY
     m_scene_manager->setAmbientLight(light);
     m_spherical_harmonics->setAmbientLight(light.toSColor());
+#endif
 }   // setAmbientLight
 
 video::SColorf IrrDriver::getAmbientLight() const
@@ -1850,6 +1891,7 @@ video::SColorf IrrDriver::getAmbientLight() const
  */
 void IrrDriver::displayFPS()
 {
+#ifndef SERVER_ONLY
     gui::IGUIFont* font = GUIEngine::getSmallFont();
     core::rect<s32> position;
 
@@ -1925,6 +1967,7 @@ void IrrDriver::displayFPS()
     static video::SColor fpsColor = video::SColor(255, 0, 0, 0);
 
     font->draw( fpsString.c_str(), position, fpsColor, false );
+#endif
 }   // updateFPS
 
 // ----------------------------------------------------------------------------
@@ -2206,6 +2249,7 @@ void IrrDriver::update(float dt)
 
     if (world)
     {
+#ifndef SERVER_ONLY
         if (CVS->isGLSL())
             renderGLSL(dt);
         else
@@ -2225,6 +2269,7 @@ void IrrDriver::update(float dt)
                 debug_drawer->beginNextFrame();
             }
         }
+#endif
     }
     else
     {
@@ -2295,8 +2340,12 @@ bool IrrDriver::OnEvent(const irr::SEvent &event)
 
 bool IrrDriver::supportsSplatting()
 {
+#ifndef SERVER_ONLY
     return CVS->isGLSL();
-}
+#else
+    return false;
+#endif
+}   // supportsSplatting
 
 // ----------------------------------------------------------------------------
 
@@ -2354,6 +2403,7 @@ void IrrDriver::RTTProvider::setupRTTScene(PtrVector<scene::IMesh, REF>& mesh,
                                            AlignedArray<Vec3>& mesh_scale,
                                            const std::vector<int>& model_frames)
 {
+#ifndef SERVER_ONLY
     if (model_frames[0] == -1)
     {
         scene::ISceneNode* node =
@@ -2449,6 +2499,7 @@ void IrrDriver::RTTProvider::setupRTTScene(PtrVector<scene::IMesh, REF>& mesh,
     // Detach the note from the scene so we can render it independently
     m_rtt_main_node->setVisible(false);
     m_light->setVisible(false);
+#endif
 }   // setupRTTScene
 
 // ----------------------------------------------------------------------------

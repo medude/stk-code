@@ -384,14 +384,14 @@ scene::ISceneNode* KartModel::attachModel(bool animated_models, bool always_anim
                                         irr_driver->getSceneManager()->getRootSceneNode(),
                                         irr_driver->getSceneManager()                    );
 
-
+#ifndef SERVER_ONLY
         node = irr_driver->addAnimatedMesh(m_mesh, "kartmesh");
         // as animated mesh are not cheap to render use frustum box culling
         if (CVS->isGLSL())
             node->setAutomaticCulling(scene::EAC_OFF);
         else
             node->setAutomaticCulling(scene::EAC_FRUSTUM_BOX);
-
+#endif
         if (always_animated)
         {
             // give a huge LOD distance for the player's kart. the reason is that it should
@@ -435,7 +435,7 @@ scene::ISceneNode* KartModel::attachModel(bool animated_models, bool always_anim
             if(!m_speed_weighted_objects[i].m_node) continue;
             m_speed_weighted_objects[i].m_node->setParent(lod_node);
         }
-
+#ifndef SERVER_ONLY
         // Enable rim lighting for the kart
         irr_driver->applyObjectPassShader(lod_node, true);
         std::vector<scene::ISceneNode*> &lodnodes = lod_node->getAllNodes();
@@ -444,6 +444,7 @@ scene::ISceneNode* KartModel::attachModel(bool animated_models, bool always_anim
         {
             irr_driver->applyObjectPassShader(lodnodes[i], true);
         }
+#endif
     }
     else
     {

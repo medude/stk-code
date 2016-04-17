@@ -361,8 +361,10 @@ TrackObjectPresentationMesh::TrackObjectPresentationMesh(
 
     if (!animated)
     {
+#ifndef SERVER_ONLY
         m_mesh = MeshTools::createMeshWithTangents(m_mesh,
                                                    &MeshTools::isNormalMap);
+#endif
     }
     init(&xml_node, parent, enabled);
 }   // TrackObjectPresentationMesh
@@ -504,10 +506,11 @@ void TrackObjectPresentationMesh::init(const XMLNode* xml_node,
             xml_node->get("displacing", &displacing);
 
         m_node = irr_driver->addMesh(m_mesh, m_model_file, parent);
-
+#ifndef SERVER_ONLY
         STKMeshSceneNode* stkmesh = dynamic_cast<STKMeshSceneNode*>(m_node);
         if (displacing && stkmesh != NULL)
             stkmesh->setIsDisplacement(displacing);
+#endif
 
         m_frame_start = 0;
         m_frame_end = 0;
@@ -828,7 +831,6 @@ TrackObjectPresentationParticles::TrackObjectPresentationParticles(
 {
     m_emitter = NULL;
     m_lod_emitter_node = NULL;
-
     std::string path;
     xml_node.get("kind", &path);
     
@@ -842,6 +844,7 @@ TrackObjectPresentationParticles::TrackObjectPresentationParticles(
     m_delayed_stop = false;
     m_delayed_stop_time = 0.0;
 
+#ifndef SERVER_ONLY
     try
     {
         ParticleKind* kind = ParticleKindManager::get()->getParticles(path);
@@ -878,6 +881,7 @@ TrackObjectPresentationParticles::TrackObjectPresentationParticles(
         Log::warn ("Track", "Could not load particles '%s'; cause :\n    %s",
                    path.c_str(), e.what());
     }
+#endif
 }   // TrackObjectPresentationParticles
 
 // ----------------------------------------------------------------------------
@@ -916,20 +920,24 @@ void TrackObjectPresentationParticles::update(float dt)
 // ----------------------------------------------------------------------------
 void TrackObjectPresentationParticles::triggerParticles()
 {
+#ifndef SERVER_ONLY
     if (m_emitter != NULL)
     {
         m_emitter->setCreationRateAbsolute(1.0f);
         m_emitter->setParticleType(m_emitter->getParticlesInfo());
     }
+#endif
 }   // triggerParticles
 // ----------------------------------------------------------------------------
 void TrackObjectPresentationParticles::stop()
 {
+#ifndef SERVER_ONLY
     if (m_emitter != NULL)
     {
         m_emitter->setCreationRateAbsolute(0.0f);
         m_emitter->clearParticles();
     }
+#endif
 }
 // ----------------------------------------------------------------------------
 void TrackObjectPresentationParticles::stopIn(double delay)
@@ -940,12 +948,15 @@ void TrackObjectPresentationParticles::stopIn(double delay)
 // ----------------------------------------------------------------------------
 void TrackObjectPresentationParticles::setRate(float rate)
 {
+#ifndef SERVER_ONLY
     if (m_emitter != NULL)
     {
         m_emitter->setCreationRateAbsolute(rate);
         m_emitter->setParticleType(m_emitter->getParticlesInfo());
     }
-}
+#endif
+}   // setRate
+
 // ----------------------------------------------------------------------------
 TrackObjectPresentationLight::TrackObjectPresentationLight(
                                                      const XMLNode& xml_node, 
@@ -960,7 +971,7 @@ TrackObjectPresentationLight::TrackObjectPresentationLight(
 
     m_distance = 20.f * m_energy;
     xml_node.get("distance", &m_distance);
-
+#ifndef SERVER_ONLY
     if (CVS->isGLSL())
     {
         m_node = irr_driver->addLight(m_init_xyz, m_energy, m_distance,
@@ -968,6 +979,7 @@ TrackObjectPresentationLight::TrackObjectPresentationLight(
                                       parent);
     }
     else
+#endif
     {
         m_node = NULL; // lights require shaders to work
     }

@@ -58,6 +58,7 @@ void ModelDefinitionLoader::addModelDefinition(const XMLNode* xml)
 
 LODNode* ModelDefinitionLoader::instanciateAsLOD(const XMLNode* node, scene::ISceneNode* parent)
 {
+#ifndef SERVER_ONLY
     scene::ISceneManager* sm = irr_driver->getSceneManager();
 
     std::string groupname = "";
@@ -130,6 +131,7 @@ LODNode* ModelDefinitionLoader::instanciateAsLOD(const XMLNode* node, scene::ISc
         Log::warn("ModelDefinitionLoader", "LOD group '%s' is empty", groupname.c_str());
         return NULL;
     }
+#endif
 }
 
 // ----------------------------------------------------------------------------

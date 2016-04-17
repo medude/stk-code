@@ -262,8 +262,10 @@ void LocalPlayerController::handleZipper(bool play_sound)
         m_wee_sound->play();
     }
 
+#ifndef SERVER_ONLY
     // Apply the motion blur according to the speed of the kart
     irr_driver->getPostProcessing()->giveBoost(m_camera->getIndex());
+#endif
 
 }   // handleZipper
 
