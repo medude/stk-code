@@ -1962,5 +1962,6 @@ void IrrDriver::renderRSM()
     }
     getShadowMatrices()->setRSMMapAvail(true);
 
+}   // renderRSM
 
 #endif   // SERVER_ONLY
