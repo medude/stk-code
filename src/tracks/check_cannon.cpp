@@ -42,7 +42,7 @@ CheckCannon::CheckCannon(const XMLNode &node,  unsigned int index)
     m_curve = new Ipo(*(node.getNode("curve")),
                       /*fps*/25,
                       /*reverse*/race_manager->getReverseTrack());
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(SERVER_ONLY)
     if(UserConfigParams::m_track_debug)
     {
         m_show_curve = new ShowCurve(0.5f, 0.5f);
@@ -60,7 +60,7 @@ CheckCannon::CheckCannon(const XMLNode &node,  unsigned int index)
 CheckCannon::~CheckCannon()
 {
     delete m_curve;
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(SERVER_ONLY)
     if(UserConfigParams::m_track_debug)
         delete m_show_curve;
 #endif
