@@ -131,6 +131,8 @@ LODNode* ModelDefinitionLoader::instanciateAsLOD(const XMLNode* node, scene::ISc
         Log::warn("ModelDefinitionLoader", "LOD group '%s' is empty", groupname.c_str());
         return NULL;
     }
+#else
+    return NULL;
 #endif
 }
 
