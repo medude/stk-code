@@ -38,7 +38,14 @@ inline btScalar	calculateCombinedFriction(const btCollisionObject* body0,const b
 
 inline btScalar	calculateCombinedRestitution(const btCollisionObject* body0,const btCollisionObject* body1)
 {
-	return body0->getRestitution() * body1->getRestitution();
+    // Fix odd behaviour when colliding with track (i.e. ball not bouncing back as expected):
+    // in case of static or kinematic object, use only restitution from colliding object
+    if(body0->isStaticOrKinematicObject())
+        return body1->getRestitution();
+    else if(body1->isStaticOrKinematicObject())
+        return body0->getRestitution();
+    else
+        return body0->getRestitution() * body1->getRestitution();
 }
 
 
