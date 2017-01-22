@@ -279,6 +279,16 @@ enum AnimType {ANIMS_NONE         = 0,
                ANIMS_PLAYERS_ONLY = 1,
                ANIMS_ALL          = 2 };
 
+enum GeometryLevel
+{
+    /** Display everything */
+    GEOLEVEL_0    = 0,
+    /** a few details are displayed */
+    GEOLEVEL_1    = 1,
+    /** Lowest level, no details are displayed. */
+    GEOLEVEL_2    = 2
+};
+
 /** Using X-macros for setting-possible values is not very pretty, but it's a
  *  no-maintenance case :
  *  when you want to add a new parameter, just add one signle line below and
@@ -388,6 +398,34 @@ namespace UserConfigParams
             PARAM_DEFAULT( FloatUserConfigParam(0.0f, "wiimote-weight-sin",
             &m_wiimote_group,
             "A weight applied to the sin component of mapping wiimote angle to steering angle"));
+
+    // ---- Multitouch device
+    PARAM_PREFIX GroupUserConfigParam        m_multitouch_group
+        PARAM_DEFAULT( GroupUserConfigParam("Multitouch",
+                                            "Settings for the multitouch device") );
+
+    PARAM_PREFIX BoolUserConfigParam         m_multitouch_enabled
+            PARAM_DEFAULT( BoolUserConfigParam(false, "multitouch_enabled",
+            &m_multitouch_group,
+            "Enable multitouch support.") );
+
+    PARAM_PREFIX FloatUserConfigParam         m_multitouch_deadzone_center
+            PARAM_DEFAULT( FloatUserConfigParam(0.1f, "multitouch_deadzone_center",
+            &m_multitouch_group,
+            "A parameter in range [0, 0.5] that determines the zone that is "
+            "considered as centered in steering button."));
+
+    PARAM_PREFIX FloatUserConfigParam         m_multitouch_deadzone_edge
+            PARAM_DEFAULT( FloatUserConfigParam(0.25f, "multitouch_deadzone_edge",
+            &m_multitouch_group,
+            "A parameter in range [0, 0.5] that determines the zone that is "
+            "considered as max value in steering button."));
+            
+    PARAM_PREFIX FloatUserConfigParam         m_multitouch_scale
+            PARAM_DEFAULT( FloatUserConfigParam(1.0f, "multitouch_scale",
+            &m_multitouch_group,
+            "A parameter in range [0.5, 1.5] that determines the scale of the "
+            "multitouch interface."));
 
     // ---- GP start order
     PARAM_PREFIX GroupUserConfigParam        m_gp_start_order
@@ -554,6 +592,8 @@ namespace UserConfigParams
     PARAM_PREFIX bool m_no_start_screen   PARAM_DEFAULT( false );
 
     PARAM_PREFIX bool m_race_now          PARAM_DEFAULT( false );
+    
+    PARAM_PREFIX bool m_enforce_current_player PARAM_DEFAULT( false );
 
     /** True to test funky ambient/diffuse/specularity in RGB &
      *  all anisotropic */
@@ -645,6 +685,13 @@ namespace UserConfigParams
                             "steering_animations", &m_graphics_quality,
                 "Whether to display kart animations (0=disabled for all; "
                 "1=enabled for humans, disabled for AIs; 2=enabled for all") );
+
+    PARAM_PREFIX IntUserConfigParam        m_geometry_level
+            PARAM_DEFAULT(  IntUserConfigParam(GEOLEVEL_0,
+                            "geometry_level", &m_graphics_quality,
+                "Geometry quality 0=everything is displayed; "
+                "1=a few details are displayed; 2=lowest level, no details") );
+
     PARAM_PREFIX IntUserConfigParam         m_anisotropic
             PARAM_DEFAULT( IntUserConfigParam(4, "anisotropic",
                            &m_graphics_quality,
@@ -678,7 +725,7 @@ namespace UserConfigParams
                            "Enable Screen Space Ambient Occlusion") );
     PARAM_PREFIX IntUserConfigParam          m_shadows_resolution
             PARAM_DEFAULT( IntUserConfigParam(0,
-                           "shadows_resoltion", &m_graphics_quality,
+                           "shadows_resolution", &m_graphics_quality,
                            "Shadow resolution (0 = disabled") );
     PARAM_PREFIX BoolUserConfigParam          m_degraded_IBL
         PARAM_DEFAULT(BoolUserConfigParam(true,
@@ -863,6 +910,10 @@ namespace UserConfigParams
     PARAM_PREFIX BoolUserConfigParam        m_artist_debug_mode
             PARAM_DEFAULT( BoolUserConfigParam(false, "artist_debug_mode",
                                "Whether to enable track debugging features") );
+                               
+    PARAM_PREFIX BoolUserConfigParam        m_everything_unlocked
+            PARAM_DEFAULT( BoolUserConfigParam(false, "everything_unlocked",
+                               "Enable all karts and tracks") );
 
     // TODO? implement blacklist for new irrlicht device and GUI
     PARAM_PREFIX std::vector<std::string>   m_blacklist_res;

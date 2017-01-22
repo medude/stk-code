@@ -24,6 +24,7 @@
 #include "utils/translation.hpp"
 #include "graphics/central_settings.hpp"
 #include "graphics/irr_driver.hpp"
+#include "graphics/shared_gpu_objects.hpp"
 
 #include <IGUIEnvironment.h>
 
@@ -36,8 +37,12 @@ using namespace irr::gui;
 // -----------------------------------------------------------------------------
 
 CustomVideoSettingsDialog::CustomVideoSettingsDialog(const float w, const float h) :
-        ModalDialog(w, h)
+        ModalDialog(w, h), m_all_kart_animated(true)
 {
+#ifndef SERVER_ONLY
+    m_all_kart_animated = SharedGPUObjects::getMaxMat4Size() > 512 ||
+        !CVS->supportsHardwareSkinning();
+#endif
     loadFromFile("custom_video_settings.stkgui");
     updateActivation();
 }
@@ -52,6 +57,7 @@ CustomVideoSettingsDialog::~CustomVideoSettingsDialog()
 
 void CustomVideoSettingsDialog::beforeAddingWidgets()
 {
+#ifndef SERVER_ONLY
     getWidget<CheckBoxWidget>("anim_gfx")->setState(UserConfigParams::m_graphical_effects);
     getWidget<CheckBoxWidget>("weather_gfx")->setState(UserConfigParams::m_weather_effects);
     getWidget<CheckBoxWidget>("dof")->setState(UserConfigParams::m_dof);
@@ -63,8 +69,22 @@ void CustomVideoSettingsDialog::beforeAddingWidgets()
     //I18N: animations setting (only karts with human players are animated)
     kart_anim->addLabel(_("Human players only")); // 1
     //I18N: animations setting (all karts are animated)
-    kart_anim->addLabel(_("Enabled for all")); // 2
-    kart_anim->setValue(UserConfigParams::m_show_steering_animations);
+    if (m_all_kart_animated)
+        kart_anim->addLabel(_("Enabled for all")); // 2
+    kart_anim->setValue(!m_all_kart_animated &&
+        UserConfigParams::m_show_steering_animations == 2 ?
+        1 : UserConfigParams::m_show_steering_animations);
+
+    SpinnerWidget* geometry_level = getWidget<SpinnerWidget>("geometry_detail");
+    //I18N: Geometry level disabled : lowest level, no details
+    geometry_level->addLabel(_("Disabled"));
+    //I18N: Geometry level low : few details are displayed
+    geometry_level->addLabel(_("low"));
+    //I18N: Geometry level high : everything is displayed
+    geometry_level->addLabel(_("high"));
+    geometry_level->setValue(
+        UserConfigParams::m_geometry_level == 2 ? 0 :
+        UserConfigParams::m_geometry_level == 0 ? 2 : 1);
 
     SpinnerWidget* filtering = getWidget<SpinnerWidget>("filtering");
     int value = 0;
@@ -115,12 +135,14 @@ void CustomVideoSettingsDialog::beforeAddingWidgets()
         shadows->setActive(false);
         getWidget<CheckBoxWidget>("global_illumination")->setActive(false);
     }
+#endif
 }
 
 // -----------------------------------------------------------------------------
 
 GUIEngine::EventPropagation CustomVideoSettingsDialog::processEvent(const std::string& eventSource)
 {
+#ifndef SERVER_ONLY
     if (eventSource == "close")
     {
         bool advanced_pipeline = getWidget<CheckBoxWidget>("dynamiclight")->getState();
@@ -181,6 +203,10 @@ GUIEngine::EventPropagation CustomVideoSettingsDialog::processEvent(const std::s
         UserConfigParams::m_show_steering_animations =
             getWidget<SpinnerWidget>("steering_animations")->getValue();
 
+        const int val =
+            getWidget<SpinnerWidget>("geometry_detail")->getValue();
+        UserConfigParams::m_geometry_level = val == 2 ? 0 : val == 0 ? 2 : 1;
+
         switch (getWidget<SpinnerWidget>("filtering")->getValue())
         {
             case 0:
@@ -219,7 +245,7 @@ GUIEngine::EventPropagation CustomVideoSettingsDialog::processEvent(const std::s
     {
         updateActivation();
     }
-
+#endif
     return GUIEngine::EVENT_LET;
 }   // processEvent
 
@@ -227,6 +253,7 @@ GUIEngine::EventPropagation CustomVideoSettingsDialog::processEvent(const std::s
 
 void CustomVideoSettingsDialog::updateActivation()
 {
+#ifndef SERVER_ONLY
     bool light = getWidget<CheckBoxWidget>("dynamiclight")->getState();
     getWidget<CheckBoxWidget>("motionblur")->setActive(light);
     getWidget<CheckBoxWidget>("dof")->setActive(light);
@@ -238,11 +265,14 @@ void CustomVideoSettingsDialog::updateActivation()
     getWidget<CheckBoxWidget>("global_illumination")->setActive(light);
     getWidget<CheckBoxWidget>("glow")->setActive(light);
     getWidget<CheckBoxWidget>("bloom")->setActive(light);
+    getWidget<SpinnerWidget>("steering_animations")
+        ->setMax(m_all_kart_animated ? 2 : 1);
 
     if (!CVS->supportsShadows() && !CVS->supportsGlobalIllumination())
     {
         getWidget<SpinnerWidget>("shadows")->setActive(false);
         getWidget<CheckBoxWidget>("global_illumination")->setActive(false);
     }
+#endif
 }   // updateActivation
 

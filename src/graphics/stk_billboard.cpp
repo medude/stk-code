@@ -15,14 +15,15 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#ifndef SERVER_ONLY
+
 #include "graphics/stk_billboard.hpp"
 
-#include "graphics/glwrap.hpp"
 #include "graphics/irr_driver.hpp"
 #include "graphics/material.hpp"
 #include "graphics/material_manager.hpp"
-#include "graphics/shaders.hpp"
 #include "graphics/shared_gpu_objects.hpp"
+#include "graphics/texture_shader.hpp"
 
 #include <ISceneManager.h>
 
@@ -108,13 +109,14 @@ void STKBillboard::render()
     else
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    compressTexture(tex, true, true);
-    GLuint texid = getTextureGLuint(tex);
     BillboardShader::getInstance()->use();
-    BillboardShader::getInstance()->setTextureUnits(texid);
+    BillboardShader::getInstance()->setTextureUnits(tex->getOpenGLTextureName());
     BillboardShader::getInstance()->setUniforms(irr_driver->getViewMatrix(), 
                                                 irr_driver->getProjMatrix(),
                                                 pos, Size);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 }   // render
+
+#endif   // !SERVER_ONLY
+

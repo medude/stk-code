@@ -15,6 +15,8 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#ifndef SHADER_ONLY
+
 #ifndef HEADER_TEXTURE_SHADER_HPP
 #define HEADER_TEXTURE_SHADER_HPP
 
@@ -243,14 +245,21 @@ public:
         for (unsigned i = 0; i < m_sampler_ids.size(); i++)
             glDeleteSamplers(1, &m_sampler_ids[i]);
     }   // ~TextureShader
-
-    /** Override this class and return true if a shader has changeable color.
+    // ------------------------------------------------------------------------
+    /** For AZDO to remove the old texture handles, according to specification,
+     *  they can only be removed when the underlying texture or sampler objects
+     *  are finally deleted. This deletion will happen only when no handle
+     *  using the texture or sampler object is resident on any context.
      */
-    virtual bool changeableColor(float hue = 0.0f, float min_sat = 0.0f) const
+    void recreateTrilinearSampler(int sampler_id)
     {
-        return false;
-    }   // changeableColor
+        glDeleteSamplers(1, &m_sampler_ids[sampler_id]);
+        m_sampler_ids[sampler_id] =
+            createSamplers(ST_TRILINEAR_ANISOTROPIC_FILTERED);
+    }   // recreateTrilinearSampler
 
 };   // class TextureShader
 
 #endif
+
+#endif   // SHADER_ONLY

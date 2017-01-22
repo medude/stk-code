@@ -25,7 +25,8 @@
 #include "config/user_config.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/irr_driver.hpp"
-#include "graphics/post_processing.hpp"
+#include "graphics/particle_emitter.hpp"
+#include "graphics/particle_kind.hpp"
 #include "input/input_manager.hpp"
 #include "items/attachment.hpp"
 #include "items/item.hpp"
@@ -40,6 +41,7 @@
 #include "network/race_event_manager.hpp"
 #include "race/history.hpp"
 #include "states_screens/race_gui_base.hpp"
+#include "tracks/track.hpp"
 #include "utils/constants.hpp"
 #include "utils/log.hpp"
 #include "utils/translation.hpp"
@@ -53,7 +55,7 @@
  */
 LocalPlayerController::LocalPlayerController(AbstractKart *kart,
                                    StateManager::ActivePlayer *player)
-                     : PlayerController(kart)
+                     : PlayerController(kart), m_sky_particles_emitter(NULL)
 {
     m_player = player;
     if(player)
@@ -68,6 +70,26 @@ LocalPlayerController::LocalPlayerController(AbstractKart *kart,
     m_ugh_sound    = SFXManager::get()->createSoundSource("ugh");
     m_grab_sound   = SFXManager::get()->createSoundSource("grab_collectable");
     m_full_sound   = SFXManager::get()->createSoundSource("energy_bar_full");
+
+    // Attach Particle System
+    Track *track = Track::getCurrentTrack();
+#ifndef SERVER_ONLY
+    if (UserConfigParams::m_weather_effects &&
+        track->getSkyParticles() != NULL)
+    {
+        track->getSkyParticles()->setBoxSizeXZ(150.0f, 150.0f);
+
+        m_sky_particles_emitter =
+            new ParticleEmitter(track->getSkyParticles(),
+                                core::vector3df(0.0f, 30.0f, 100.0f),
+                                m_kart->getNode(),
+                                true);
+
+        // FIXME: in multiplayer mode, this will result in several instances
+        //        of the heightmap being calculated and kept in memory
+        m_sky_particles_emitter->addHeightMapAffector(track);
+    }
+#endif
 }   // LocalPlayerController
 
 //-----------------------------------------------------------------------------
@@ -80,6 +102,8 @@ LocalPlayerController::~LocalPlayerController()
     m_ugh_sound ->deleteSFX();
     m_grab_sound->deleteSFX();
     m_full_sound->deleteSFX();
+    if (m_sky_particles_emitter)
+        delete m_sky_particles_emitter;
 }   // ~LocalPlayerController
 
 //-----------------------------------------------------------------------------
@@ -147,7 +171,8 @@ void LocalPlayerController::steer(float dt, int steer_val)
     
     if(UserConfigParams::m_gamepad_debug)
     {
-        Log::debug("LocalPlayerController", "  set to: %f\n", m_controls->m_steer);
+        Log::debug("LocalPlayerController", "  set to: %f\n",
+                   m_controls->getSteer());
     }
 }   // steer
 
@@ -167,21 +192,34 @@ void LocalPlayerController::update(float dt)
 
     // look backward when the player requests or
     // if automatic reverse camera is active
+#ifndef SERVER_ONLY
     Camera *camera = Camera::getCamera(m_camera_index);
     if (camera->getType() != Camera::CM_TYPE_END)
     {
-        if (m_controls->m_look_back || (UserConfigParams::m_reverse_look_threshold > 0 &&
+        if (m_controls->getLookBack() || (UserConfigParams::m_reverse_look_threshold > 0 &&
             m_kart->getSpeed() < -UserConfigParams::m_reverse_look_threshold))
         {
             camera->setMode(Camera::CM_REVERSE);
+            if (m_sky_particles_emitter)
+            {
+                m_sky_particles_emitter->setPosition(Vec3(0, 30, -100));
+                m_sky_particles_emitter->setRotation(Vec3(0, 180, 0));
+            }
         }
         else
         {
             if (camera->getMode() == Camera::CM_REVERSE)
+            {
                 camera->setMode(Camera::CM_NORMAL);
+                if (m_sky_particles_emitter)
+                {
+                    m_sky_particles_emitter->setPosition(Vec3(0, 30, 100));
+                    m_sky_particles_emitter->setRotation(Vec3(0, 0, 0));
+                }
+            }
         }
     }
-
+#endif
     if (m_kart->getKartAnimation() && m_sound_schedule == false &&
         m_kart->getAttachment()->getType() != Attachment::ATTACH_TINYTUX)
     {
@@ -263,8 +301,10 @@ void LocalPlayerController::handleZipper(bool play_sound)
         m_wee_sound->play();
     }
 
+#ifndef SERVER_ONLY
     // Apply the motion blur according to the speed of the kart
-    irr_driver->getPostProcessing()->giveBoost(m_camera_index);
+    irr_driver->giveBoost(m_camera_index);
+#endif
 
 }   // handleZipper
 

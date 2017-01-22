@@ -31,26 +31,54 @@
  * Here is an overview of the high-level interactions between modules :
  \dot
  digraph interaction {
- race -> modes
+# race -> modes
  race -> tracks
  race -> karts
- modes -> tracks
- modes -> karts
+# modes -> tracks
+# modes -> karts
  tracks -> graphics
  karts -> graphics
  tracks -> items
- graphics -> irrlicht
- guiengine -> irrlicht
- states_screens -> guiengine
- states_screens -> input
- guiengine -> input
- karts->physics
- tracks->physics
- karts -> controller
- input->controller
+ items -> graphics
+ animations -> graphics
+ graphics -> "Antarctica/irrlicht"
+# guiengine -> irrlicht
+# states_screens -> guiengine
+# input -> states_screens
+ input -> guiengine
+ guiengine -> font_system
+ karts -> physics
+ physics -> karts
+ tracks -> physics
+ ai -> controller
+ controller -> karts
+ input -> controller
  tracks -> animations
  physics -> animations
- }
+ animations -> physics
+ karts -> audio
+ physics -> audio
+ "translations\n(too many connections\nto draw)"
+ "configuration\n(too many connections\nto draw)"
+ addons -> tracks
+ addons -> karts
+ guiengine -> addons
+ guiengine -> race
+ addons -> online_manager
+ challenges -> race
+# challenges -> modes
+ guiengine -> challenges
+ online_manager -> addons
+ online_manager -> "STK Server"
+ "STK Server" -> online_manager
+ karts -> replay
+ replay 
+ # force karts and tracks on the same level, looks better this way
+ subgraph { 
+  rank = same; karts; tracks; 
+ } 
+
+}
  \enddot
 
  Note that this graph is only an approximation because the real one would be
@@ -73,6 +101,8 @@
    This module handles the user configuration, the supertuxkart configuration
    file (which contains options usually not edited by the player) and the input
    configuration file.
+ \li \ref font :
+   This module stores font files and tools used to draw characters in STK.
  \li \ref graphics :
    This module contains the core graphics engine, that is mostly a thin layer
    on top of irrlicht providing some additional features we need for STK
@@ -179,8 +209,10 @@
 #include "modes/profile_world.hpp"
 #include "network/network_config.hpp"
 #include "network/network_string.hpp"
+#include "network/rewind_manager.hpp"
 #include "network/servers_manager.hpp"
 #include "network/stk_host.hpp"
+#include "network/protocols/get_public_address.hpp"
 #include "online/profile_manager.hpp"
 #include "online/request_manager.hpp"
 #include "race/grand_prix_manager.hpp"
@@ -190,11 +222,12 @@
 #include "replay/replay_play.hpp"
 #include "replay/replay_recorder.hpp"
 #include "states_screens/main_menu_screen.hpp"
+#include "states_screens/networking_lobby.hpp"
 #include "states_screens/register_screen.hpp"
 #include "states_screens/state_manager.hpp"
 #include "states_screens/user_screen.hpp"
 #include "states_screens/dialogs/message_dialog.hpp"
-#include "tracks/battle_graph.hpp"
+#include "tracks/arena_graph.hpp"
 #include "tracks/track.hpp"
 #include "tracks/track_manager.hpp"
 #include "utils/command_line.hpp"
@@ -395,9 +428,11 @@ void handleXmasMode()
  */
 bool isEasterMode(int day, int month, int year, int before_after_days)
 {
-    switch (UserConfigParams::m_easter_ear_mode)
-    {
-    case 0:
+    if (UserConfigParams::m_easter_ear_mode == 1) {
+        return true;
+    }
+
+    if (UserConfigParams::m_easter_ear_mode == 0)
     {
         // Compute Easter date, based on wikipedia formula
         // http://en.wikipedia.org/wiki/Computus
@@ -429,12 +464,9 @@ bool isEasterMode(int day, int month, int year, int before_after_days)
         }
         return (month > easter_start_month || (month == easter_start_month && day >= easter_start_day)) &&
                (month < easter_end_month   || (month == easter_end_month   && day <= easter_end_day));
-        break;
     }
-    case 1:  return true;  break;
-    default: return false; break;
-    }   // switch m_xmas_mode
 
+    return false;
 }   // isEasterMode(day, month, year, before_after_days)
 
 // ============================================================================
@@ -541,11 +573,15 @@ void cmdLineHelp()
     // "                          (so n=1 means all Ais will be the test ai)\n"
     // "
     "       --server=name      Start a server (not a playing client).\n"
+    "       --public-server    Allow direct connection to the server (without stk server)\n"
     "       --lan-server=name  Start a LAN server (not a playing client).\n"
     "       --server-password= Sets a password for a server (both client&server).\n"
+    "       --connect-now=ip   Connect to a server with IP known now (in format x.x.x.x:xxx(port)).\n"
     "       --login=s          Automatically log in (set the login).\n"
     "       --password=s       Automatically log in (set the password).\n"
     "       --port=n           Port number to use.\n"
+    "       --my-address=1.1.1.1:1  Own IP address (can replace stun protocol)\n"
+    "       --disable-lan      Disable LAN detection (connect using WAN).\n"
     "       --max-players=n    Maximum number of clients (server only).\n"
     "       --no-console       Does not write messages in the console but to\n"
     "                          stdout.log.\n"
@@ -880,6 +916,8 @@ int handleCmdLine()
         AIBaseController::setTestAI(n);
     if (CommandLine::has("--fps-debug"))
         UserConfigParams::m_fps_debug = true;
+    if (CommandLine::has("--rewind") )
+        RewindManager::setEnable(true);
     if(CommandLine::has("--soccer-ai-stats"))
     {
         UserConfigParams::m_arena_ai_stats=true;
@@ -899,13 +937,16 @@ int handleCmdLine()
     }
     if(CommandLine::has("--battle-ai-stats"))
     {
+        std::string track;
+        if (!CommandLine::has("--track", &track))
+            track = "temple";
         UserConfigParams::m_arena_ai_stats=true;
         race_manager->setMinorMode(RaceManager::MINOR_MODE_3_STRIKES);
         std::vector<std::string> l;
         for (int i = 0; i < 8; i++)
             l.push_back("tux");
         race_manager->setDefaultAIKartList(l);
-        race_manager->setTrack("temple");
+        race_manager->setTrack(track);
         race_manager->setNumKarts(8);
         race_manager->setDifficulty(RaceManager::Difficulty(3));
         UserConfigParams::m_no_start_screen = true;
@@ -940,6 +981,34 @@ int handleCmdLine()
     // Networking command lines
     NetworkConfig::get()->
         setMaxPlayers(UserConfigParams::m_server_max_players);
+    if (CommandLine::has("--port", &n))
+    {
+        // We don't know if this instance is going to be a client
+        // or server, so just set both ports, only one will be used anyway
+        NetworkConfig::get()->setClientPort(n);
+        NetworkConfig::get()->setServerPort(n);
+    }
+    if (CommandLine::has("--public-server"))
+    {
+        NetworkConfig::get()->setIsPublicServer();
+    }
+    if (CommandLine::has("--connect-now", &s))
+    {
+        TransportAddress ip(s);
+        TransportAddress me(2130706433/*127.0.0.1*/, 
+                            NetworkConfig::get()->getServerDiscoveryPort() );
+        NetworkConfig::get()->setIsLAN();
+        NetworkConfig::get()->setIsServer(false);
+        NetworkConfig::get()->setMyAddress(me);
+        Log::info("main", "Try to connect to server '%s'.",
+                  ip.toString().c_str()                    );
+        irr::core::stringw name = StringUtils::utf8ToWide(ip.toString());
+        ServersManager::get()->addServer(new Server(name, /*lan*/true,
+                                                    16, 0, ip));
+        ServersManager::get()->setJoinedServer(0);
+        STKHost::create();
+    }
+
     if(CommandLine::has("--server", &s))
     {
         NetworkConfig::get()->setServerName(core::stringw(s.c_str()));
@@ -975,6 +1044,14 @@ int handleCmdLine()
 
     if(CommandLine::has("--password", &s))
         password = s.c_str();
+
+    if (CommandLine::has("--my-address", &s))
+        GetPublicAddress::setMyIPAddress(s);
+
+    /** Disable detection of LAN connection when connecting via WAN. This is
+     *  mostly a debugging feature to force using WAN connection. */
+    if (CommandLine::has("--disable-lan"))
+        NetworkConfig::m_disable_lan = true;
 
     // Race parameters
     if(CommandLine::has("--kartsize-debug"))
@@ -1497,7 +1574,7 @@ int main(int argc, char *argv[] )
         // Both item_manager and powerup_manager load models and therefore
         // textures from the model directory. To avoid reading the
         // materials.xml twice, we do this here once for both:
-        file_manager->pushTextureSearchPath(file_manager->getAsset(FileManager::MODEL,""));
+        file_manager->pushTextureSearchPath(file_manager->getAsset(FileManager::MODEL,""), "models");
         const std::string materials_file =
             file_manager->getAsset(FileManager::MODEL,"materials.xml");
         if(materials_file!="")
@@ -1567,6 +1644,7 @@ int main(int argc, char *argv[] )
             }
             Log::warn("OpenGL", "Driver is too old!");
         }
+#ifndef SERVER_ONLY
         else if (!CVS->isGLSL())
         {
             if (UserConfigParams::m_old_driver_popup)
@@ -1585,7 +1663,7 @@ int main(int argc, char *argv[] )
             }
             Log::warn("OpenGL", "OpenGL version is too old!");
         }
-
+#endif
         // Note that on the very first run of STK internet status is set to
         // "not asked", so the report will only be sent in the next run.
         if(UserConfigParams::m_internet_status==Online::RequestManager::IPERM_ALLOWED)
@@ -1593,8 +1671,19 @@ int main(int argc, char *argv[] )
             HardwareStats::reportHardwareStats();
         }
 
-        if(!UserConfigParams::m_no_start_screen)
+        // This can only be the case if --connect-now was used, which adds
+        // a server to the server list.
+        if (ServersManager::get()->getNumServers()==1)
         {
+            NetworkingLobby::getInstance()->push();
+        }
+        else if (!UserConfigParams::m_no_start_screen)
+        {
+            if (UserConfigParams::m_enforce_current_player)
+            {
+                PlayerManager::get()->enforceCurrentPlayer();
+            }
+
             // If there is a current player, it was saved in the config file,
             // so we immediately start the main menu (unless it was requested
             // to always show the login screen). Otherwise show the login
@@ -1848,6 +1937,8 @@ void runUnitTests()
     GraphicsRestrictions::unitTesting();
     Log::info("UnitTest", "NetworkString");
     NetworkString::unitTesting();
+    Log::info("UnitTest", "TransportAddress");
+    TransportAddress::unitTesting();
 
     Log::info("UnitTest", "Easter detection");
     // Test easter mode: in 2015 Easter is 5th of April - check with 0 days
@@ -1884,8 +1975,8 @@ void runUnitTests()
     Log::info("UnitTest", "Kart characteristics");
     CombinedCharacteristic::unitTesting();
 
-    Log::info("UnitTest", "Battle Graph");
-    BattleGraph::unitTesting();
+    Log::info("UnitTest", "Arena Graph");
+    ArenaGraph::unitTesting();
 
     Log::info("UnitTest", "Fonts for translation");
     font_manager->unitTesting();

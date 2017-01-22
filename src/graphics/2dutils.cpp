@@ -15,33 +15,27 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-#include "2dutils.hpp"
+#ifndef SERVER_ONLY
+#include "graphics/2dutils.hpp"
 
 #include "graphics/central_settings.hpp"
+#include "graphics/glwrap.hpp"
+#include "graphics/irr_driver.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/shaders.hpp"
 #include "graphics/shared_gpu_objects.hpp"
 #include "graphics/texture_shader.hpp"
-#include "glwrap.hpp"
 #include "utils/cpp2011.hpp"
 
-#if defined(USE_GLES2)
-#   define _IRR_COMPILE_WITH_OGLES2_
-#   include "../../lib/irrlicht/source/Irrlicht/COGLES2Texture.h"
-#else
-#   include "../../lib/irrlicht/source/Irrlicht/COpenGLTexture.h"
-#endif
-
-
 // ============================================================================
-class Primitive2DList : public TextureShader<Primitive2DList, 1>
+class Primitive2DList : public TextureShader<Primitive2DList, 1, float>
 {
 public:
     Primitive2DList()
     {
         loadProgram(OBJECT, GL_VERTEX_SHADER, "primitive2dlist.vert",
                             GL_FRAGMENT_SHADER, "transparent.frag");
-        assignUniforms();
+        assignUniforms("custom_alpha");
         assignSamplerNames(0, "tex", ST_BILINEAR_FILTERED);
     }   // Primitive2DList
 };   //Primitive2DList
@@ -183,16 +177,8 @@ static void drawTexColoredQuad(const video::ITexture *texture,
 
     ColoredTextureRectShader::getInstance()->use();
     glBindVertexArray(ColoredTextureRectShader::getInstance()->m_vao);
-
-#if !defined(USE_GLES2)
-    const irr::video::COpenGLTexture *t = 
-                       static_cast<const irr::video::COpenGLTexture*>(texture);
-#else
-    const irr::video::COGLES2Texture *t = 
-                       static_cast<const irr::video::COGLES2Texture*>(texture);
-#endif
     ColoredTextureRectShader::getInstance()
-        ->setTextureUnits(t->getOpenGLTextureName());
+        ->setTextureUnits(texture->getOpenGLTextureName());
     ColoredTextureRectShader::getInstance()
         ->setUniforms(core::vector2df(center_pos_x, center_pos_y),
                       core::vector2df(width, height),
@@ -364,16 +350,8 @@ void draw2DImage(const video::ITexture* texture,
 
     UniformColoredTextureRectShader::getInstance()->use();
     glBindVertexArray(SharedGPUObjects::getUI_VAO());
-
-#if !defined(USE_GLES2)
-    const video::COpenGLTexture *c_texture =
-        static_cast<const video::COpenGLTexture*>(texture);
-#else
-    const video::COGLES2Texture *c_texture =
-        static_cast<const video::COGLES2Texture*>(texture);
-#endif
     UniformColoredTextureRectShader::getInstance()
-        ->setTextureUnits(c_texture->getOpenGLTextureName());
+        ->setTextureUnits(texture->getOpenGLTextureName());
 
     UniformColoredTextureRectShader::getInstance()
         ->setUniforms(core::vector2df(center_pos_x, center_pos_y),
@@ -447,16 +425,8 @@ void draw2DImage(const video::ITexture* texture,
 
     UniformColoredTextureRectShader::getInstance()->use();
     glBindVertexArray(SharedGPUObjects::getUI_VAO());
-
-#if !defined(USE_GLES2)
-    const video::COpenGLTexture *c_texture =
-        static_cast<const video::COpenGLTexture*>(texture);
-#else
-    const video::COGLES2Texture *c_texture =
-        static_cast<const video::COGLES2Texture*>(texture);
-#endif
     UniformColoredTextureRectShader::getInstance()
-        ->setTextureUnits(c_texture->getOpenGLTextureName());
+        ->setTextureUnits(texture->getOpenGLTextureName());
 
     UniformColoredTextureRectShader::getInstance()
         ->setUniforms(core::vector2df(center_pos_x, center_pos_y),
@@ -571,14 +541,7 @@ void draw2DImage(const video::ITexture* texture,
     }
     else
     {
-#if !defined(USE_GLES2)
-        const video::COpenGLTexture *c_texture = 
-                            static_cast<const video::COpenGLTexture*>(texture);
-#else
-        const video::COGLES2Texture *c_texture = 
-                            static_cast<const video::COGLES2Texture*>(texture);
-#endif
-        drawTexQuad(c_texture->getOpenGLTextureName(), width, height,
+        drawTexQuad(texture->getOpenGLTextureName(), width, height,
                     center_pos_x, center_pos_y, tex_center_pos_x,
                     tex_center_pos_y, tex_width, tex_height);
     }
@@ -654,14 +617,7 @@ void draw2DImage(const video::ITexture* texture,
     }
     else
     {
-#if !defined(USE_GLES2)
-        const video::COpenGLTexture *c_texture =
-                            static_cast<const video::COpenGLTexture*>(texture);
-#else
-        const video::COGLES2Texture *c_texture =
-                            static_cast<const video::COGLES2Texture*>(texture);
-#endif
-        drawTexQuad(c_texture->getOpenGLTextureName(), width, height,
+        drawTexQuad(texture->getOpenGLTextureName(), width, height,
                     center_pos_x, center_pos_y, tex_center_pos_x,
                     tex_center_pos_y, tex_width, tex_height);
     }
@@ -703,9 +659,8 @@ void draw2DVertexPrimitiveList(video::ITexture *tex, const void* vertices,
     VertexUtils::bindVertexArrayAttrib(vType);
 
     Primitive2DList::getInstance()->use();
-    Primitive2DList::getInstance()->setUniforms();
-    compressTexture(tex, false);
-    Primitive2DList::getInstance()->setTextureUnits(getTextureGLuint(tex));
+    Primitive2DList::getInstance()->setUniforms(1.0f);
+    Primitive2DList::getInstance()->setTextureUnits(tex->getOpenGLTextureName());
     glDrawElements(GL_TRIANGLE_FAN, primitiveCount, GL_UNSIGNED_SHORT, 0);
 
     glDeleteVertexArrays(1, &tmpvao);
@@ -777,3 +732,6 @@ void GL32_draw2DRectangle(video::SColor color, const core::rect<s32>& position,
 
     glGetError();
 }   // GL32_draw2DRectangle
+
+#endif   // !SERVER_ONLY
+

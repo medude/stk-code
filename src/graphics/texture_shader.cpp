@@ -16,7 +16,10 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#ifndef SERVER_ONLY
+
 #include "graphics/texture_shader.hpp"
+#include "graphics/central_settings.hpp"
 
 #include "config/user_config.hpp"
 
@@ -33,7 +36,7 @@ TextureShaderBase::BindFunction TextureShaderBase::m_all_bind_functions[] =
   /* ST_SEMI_TRILINEAR                 */ &TextureShaderBase::bindTextureSemiTrilinear
 };
 
-GLuint TextureShaderBase::m_all_texture_types[] = 
+GLuint TextureShaderBase::m_all_texture_types[] =
 { /* ST_NEAREST_FILTERED               */ GL_TEXTURE_2D,
   /* ST_TRILINEAR_ANISOTROPIC_FILTERED */ GL_TEXTURE_2D,
   /* ST_TRILINEAR_CUBEMAP              */ GL_TEXTURE_CUBE_MAP,
@@ -55,7 +58,8 @@ void TextureShaderBase::bindTextureNearest(GLuint texture_unit, GLuint tex)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
 
 }   // bindTextureNearest
 
@@ -69,9 +73,13 @@ void TextureShaderBase::bindTextureTrilinearAnisotropic(GLuint tex_unit, GLuint 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    int aniso = UserConfigParams::m_anisotropic;
-    if (aniso == 0) aniso = 1;
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)aniso);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+    {
+        int aniso = UserConfigParams::m_anisotropic;
+        if (aniso == 0) aniso = 1;
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                        (float)aniso);
+    }
 }   // bindTextureTrilinearAnisotropic
 
 // ----------------------------------------------------------------------------
@@ -84,10 +92,13 @@ void TextureShaderBase::bindCubemapTrilinear(unsigned tex_unit, unsigned tex)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    int aniso = UserConfigParams::m_anisotropic;
-    if (aniso == 0) aniso = 1;
-    glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                    (float)aniso);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+    {
+        int aniso = UserConfigParams::m_anisotropic;
+        if (aniso == 0) aniso = 1;
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                        (float)aniso);
+    }
 }   // bindCubemapTrilinear
 
 // ----------------------------------------------------------------------------
@@ -100,7 +111,8 @@ void TextureShaderBase::bindTextureNearestClamped(GLuint texture_unit,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
 }   // bindTextureNearestClamped
 
 // ----------------------------------------------------------------------------
@@ -114,7 +126,8 @@ void TextureShaderBase::bindTextureBilinear(GLuint texture_unit, GLuint tex)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
 }   // bindTextureBilinear
 
 // ----------------------------------------------------------------------------
@@ -126,7 +139,8 @@ void TextureShaderBase::bindTextureBilinearClamped(GLuint tex_unit, GLuint tex)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
 }   // bindTextureBilinearClamped
 
 // ----------------------------------------------------------------------------
@@ -138,7 +152,8 @@ void TextureShaderBase::bindTextureSemiTrilinear(GLuint tex_unit, GLuint tex_id)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
 }   // bindTextureSemiTrilinear
 
 // ----------------------------------------------------------------------------
@@ -165,9 +180,13 @@ void TextureShaderBase::bindTrilinearClampedArrayTexture(unsigned tex_unit,
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    int aniso = UserConfigParams::m_anisotropic;
-    if (aniso == 0) aniso = 1;
-    glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)aniso);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+    {
+        int aniso = UserConfigParams::m_anisotropic;
+        if (aniso == 0) aniso = 1;
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                        (float)aniso);
+    }
 }   // bindTrilinearClampedArrayTexture
 
 // ----------------------------------------------------------------------------
@@ -179,7 +198,8 @@ void TextureShaderBase::bindTextureVolume(unsigned tex_unit, unsigned tex_id)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
 }   // bindTextureVolume
 
 // ----------------------------------------------------------------------------
@@ -211,7 +231,8 @@ GLuint TextureShaderBase::createSamplers(SamplerTypeNew sampler_type)
         glSamplerParameteri(id, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glSamplerParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glSamplerParameteri(id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+        if (CVS->isEXTTextureFilterAnisotropicUsable())
+            glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
         return createNearestSampler();
     }
     case ST_BILINEAR_CLAMPED_FILTERED:
@@ -234,7 +255,8 @@ GLuint TextureShaderBase::createNearestSampler()
     glSamplerParameteri(id, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
     return id;
 #endif
 }   // createNearestSampler
@@ -250,9 +272,12 @@ GLuint TextureShaderBase::createTrilinearSampler()
     glSamplerParameteri(id, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    int aniso = UserConfigParams::m_anisotropic;
-    if (aniso == 0) aniso = 1;
-    glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)aniso);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+    {
+        int aniso = UserConfigParams::m_anisotropic;
+        if (aniso == 0) aniso = 1;
+        glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)aniso);
+    }
     return id;
 #endif
 }   // createTrilinearSampler
@@ -267,7 +292,8 @@ GLuint TextureShaderBase::createBilinearSampler()
     glSamplerParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
     return id;
 #endif
 }   // createBilinearSampler
@@ -297,7 +323,8 @@ GLuint TextureShaderBase::createBilinearClampedSampler()
     glSamplerParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
     return id;
 #endif
 }   // createBilinearClampedSampler
@@ -314,9 +341,12 @@ GLuint TextureShaderBase::createTrilinearClampedArray()
     glSamplerParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    int aniso = UserConfigParams::m_anisotropic;
-    if (aniso == 0) aniso = 1;
-    glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)aniso);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+    {
+        int aniso = UserConfigParams::m_anisotropic;
+        if (aniso == 0) aniso = 1;
+        glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)aniso);
+    }
     return id;
 #endif
 }   // createTrilinearClampedArray
@@ -330,10 +360,14 @@ GLuint TextureShaderBase::createSemiTrilinearSampler()
     glSamplerParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glSamplerParameteri(id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
+    if (CVS->isEXTTextureFilterAnisotropicUsable())
+        glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.);
     return id;
 #endif
 }   // createSemiTrilinearSampler
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
+
+#endif   // !SERVER_ONLY
+

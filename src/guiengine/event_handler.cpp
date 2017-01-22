@@ -17,8 +17,11 @@
 
 #include "guiengine/event_handler.hpp"
 
+#include "audio/music_manager.hpp"
+#include "audio/sfx_manager.hpp"
 #include "config/user_config.hpp"
 #include "graphics/irr_driver.hpp"
+#include "graphics/stk_tex_manager.hpp"
 #include "guiengine/abstract_state_manager.hpp"
 #include "guiengine/engine.hpp"
 #include "guiengine/modaldialog.hpp"
@@ -38,6 +41,10 @@
 #include <IGUIListBox.h>
 
 #include <iostream>
+
+#ifdef ANDROID
+#include <android_native_app_glue.h>
+#endif
 
 using GUIEngine::EventHandler;
 using GUIEngine::EventPropagation;
@@ -148,6 +155,40 @@ bool EventHandler::OnEvent (const SEvent &event)
     {
         return onGUIEvent(event) == EVENT_BLOCK;
     }
+#ifdef ANDROID    
+    else if (event.EventType == EET_SYSTEM_EVENT &&
+             event.SystemEvent.EventType == ESET_ANDROID_CMD)
+    {
+        int cmd = event.SystemEvent.AndroidCmd.Cmd;
+        
+        IrrlichtDevice* device = irr_driver->getDevice();
+        assert(device != NULL);
+        
+        if (cmd == APP_CMD_PAUSE || cmd == APP_CMD_LOST_FOCUS)
+        {
+            // Make sure that pause/unpause is executed only once
+            if (device->isWindowMinimized() == device->isWindowFocused())
+            {
+                music_manager->pauseMusic();
+                SFXManager::get()->pauseAll();
+            }
+        }
+        else if (cmd == APP_CMD_RESUME || cmd == APP_CMD_GAINED_FOCUS)
+        {
+            if (device->isWindowActive())
+            {
+                music_manager->resumeMusic();
+                SFXManager::get()->resumeAll();
+            }
+        }
+        else if (cmd == APP_CMD_LOW_MEMORY)
+        {
+            Log::warn("EventHandler", "Low memory event received");
+        }
+
+        return false;
+    }
+#endif
     else if (GUIEngine::getStateManager()->getGameState() != GUIEngine::GAME &&
              event.EventType != EET_KEY_INPUT_EVENT && event.EventType != EET_JOYSTICK_INPUT_EVENT &&
              event.EventType != EET_LOG_TEXT_EVENT)
@@ -155,6 +196,7 @@ bool EventHandler::OnEvent (const SEvent &event)
         return false; // EVENT_LET
     }
     else if (event.EventType == EET_MOUSE_INPUT_EVENT ||
+             event.EventType == EET_TOUCH_INPUT_EVENT ||
              event.EventType == EET_KEY_INPUT_EVENT   ||
              event.EventType == EET_JOYSTICK_INPUT_EVENT)
     {
@@ -219,7 +261,7 @@ bool EventHandler::OnEvent (const SEvent &event)
 #else
             return true; // EVENT_BLOCK
 #endif
-            const std::string &error_info = irr_driver->getTextureErrorMessage();
+            const std::string &error_info = STKTexManager::getInstance()->getTextureErrorMessage();
             if (event.LogEvent.Level == irr::ELL_WARNING)
             {
                 if(error_info.size()>0)
@@ -387,7 +429,7 @@ const bool NAVIGATION_DEBUG = false;
  */
 void EventHandler::navigate(const int playerID, Input::InputType type, const bool pressedDown, const bool reverse)
 {
-    IGUIElement *el = NULL, *closest = NULL;
+    IGUIElement *el = NULL;
 
     if (type == Input::IT_STICKBUTTON && !pressedDown)
         return;
@@ -450,7 +492,7 @@ void EventHandler::navigate(const int playerID, Input::InputType type, const boo
         // Down: if the current widget is e.g. 5, search for widget 6, 7, 8, 9, ..., 15 (up to 10 IDs may be missing)
         for (int n = 1; n < 10 && !found; n++)
         {
-            closest = GUIEngine::getGUIEnv()->getRootGUIElement()->getElementFromId(el->getTabOrder() + (reverse ? -n : n), true);
+            IGUIElement *closest = GUIEngine::getGUIEnv()->getRootGUIElement()->getElementFromId(el->getTabOrder() + (reverse ? -n : n), true);
 
             if (closest != NULL && Widget::isFocusableId(closest->getID()))
             {

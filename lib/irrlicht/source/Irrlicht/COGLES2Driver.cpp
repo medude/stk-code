@@ -123,18 +123,10 @@ namespace video
 			EGL_NONE, 0
 #endif
 		};
-		EGLint contextAttrib[] =
-		{
-#ifdef EGL_VERSION_1_3
-			EGL_CONTEXT_CLIENT_VERSION, 2,
-#endif
-			EGL_NONE, 0
-		};
 
-		EGLConfig config;
 		EGLint num_configs;
 		u32 steps=5;
-		while (!eglChooseConfig(EglDisplay, attribs, &config, 1, &num_configs) || !num_configs)
+		while (!eglChooseConfig(EglDisplay, attribs, &EglConfig, 1, &num_configs) || !num_configs)
 		{
 			switch (steps)
 			{
@@ -215,16 +207,16 @@ namespace video
 		* As soon as we picked a EGLConfig, we can safely reconfigure the
 		* ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
 	   EGLint format;
-	   eglGetConfigAttrib(EglDisplay, config, EGL_NATIVE_VISUAL_ID, &format);
+	   eglGetConfigAttrib(EglDisplay, EglConfig, EGL_NATIVE_VISUAL_ID, &format);
 
 	   ANativeWindow_setBuffersGeometry(EglWindow, 0, 0, format);
 	   #endif
 		os::Printer::log(" Creating EglSurface with nativeWindow...");
-		EglSurface = eglCreateWindowSurface(EglDisplay, config, EglWindow, NULL);
+		EglSurface = eglCreateWindowSurface(EglDisplay, EglConfig, EglWindow, NULL);
 		if (EGL_NO_SURFACE == EglSurface)
 		{
 			os::Printer::log("FAILED\n");
-			EglSurface = eglCreateWindowSurface(EglDisplay, config, NULL, NULL);
+			EglSurface = eglCreateWindowSurface(EglDisplay, EglConfig, NULL, NULL);
 			os::Printer::log("Creating EglSurface without nativeWindows...");
 		}
 		else
@@ -242,11 +234,41 @@ namespace video
 			eglBindAPI(EGL_OPENGL_ES_API);
 #endif
 		os::Printer::log("Creating EglContext...");
-		EglContext = eglCreateContext(EglDisplay, config, EGL_NO_CONTEXT, contextAttrib);
+		EglContext = EGL_NO_CONTEXT;
+		
+		if (!Params.ForceLegacyDevice)
+		{
+			os::Printer::log("Trying to create Context for OpenGL-ES3.");
+			
+			EGLint contextAttrib[] =
+			{
+				#ifdef EGL_VERSION_1_3
+				EGL_CONTEXT_CLIENT_VERSION, 3,
+				#endif
+				EGL_NONE, 0
+			};
+			
+			EglContext = eglCreateContext(EglDisplay, EglConfig, EGL_NO_CONTEXT, contextAttrib);
+		}
+		
 		if (EGL_NO_CONTEXT == EglContext)
 		{
-			os::Printer::log("FAILED\n");
-			os::Printer::log("Could not create Context for OpenGL-ES2 display.");
+			os::Printer::log("Trying to create Context for OpenGL-ES2.");
+			
+			EGLint contextAttrib[] =
+			{
+				#ifdef EGL_VERSION_1_3
+				EGL_CONTEXT_CLIENT_VERSION, 2,
+				#endif
+				EGL_NONE, 0
+			};
+			
+			EglContext = eglCreateContext(EglDisplay, EglConfig, EGL_NO_CONTEXT, contextAttrib);
+			if (EGL_NO_CONTEXT == EglContext)
+			{
+				os::Printer::log("FAILED\n");
+				os::Printer::log("Could not create Context for OpenGL-ES2 display.");
+			}
 		}
 
 		eglMakeCurrent(EglDisplay, EglSurface, EglSurface, EglContext);
@@ -319,11 +341,25 @@ namespace video
 			delete BridgeCalls;
         
 #if defined(EGL_VERSION_1_0)
-		// HACK : the following is commented because destroying the context crashes under Linux (Thibault 04-feb-10)
-		/*eglMakeCurrent(EGL_NO_DISPLAY, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-		eglDestroyContext(EglDisplay, EglContext);
-		eglDestroySurface(EglDisplay, EglSurface);*/
-		eglTerminate(EglDisplay);
+		eglMakeCurrent(EglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+		
+		if (EglContext != EGL_NO_CONTEXT)
+		{
+			eglDestroyContext(EglDisplay, EglContext);
+			EglContext = EGL_NO_CONTEXT;
+		}
+		
+		if (EglSurface != EGL_NO_SURFACE)
+		{
+			eglDestroySurface(EglDisplay, EglSurface);
+			EglSurface = EGL_NO_SURFACE;
+		}
+		
+		if (EglDisplay != EGL_NO_DISPLAY)
+		{
+			eglTerminate(EglDisplay);
+			EglDisplay = EGL_NO_DISPLAY;
+		}
 
 #if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_)
 		if (HDc)
@@ -351,6 +387,32 @@ namespace video
 // -----------------------------------------------------------------------
 // METHODS
 // -----------------------------------------------------------------------
+
+	void COGLES2Driver::reloadEGLSurface(void* window)
+	{
+		os::Printer::log("Reload EGL surface.");
+		
+		#ifdef EGL_VERSION_1_0
+		#if defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_)
+			EglWindow = (ANativeWindow*)window;
+		#endif
+		
+		if (!EglWindow)
+			os::Printer::log("Invalid Egl window.");
+		
+		eglMakeCurrent(EglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+	
+		eglDestroySurface(EglDisplay, EglSurface);
+		
+		EglSurface = eglCreateWindowSurface(EglDisplay, EglConfig, EglWindow, 0);
+		
+		if (EGL_NO_SURFACE == EglSurface)
+			os::Printer::log("Could not create EGL surface.");
+			
+		eglMakeCurrent(EglDisplay, EglSurface, EglSurface, EglContext);
+		#endif
+	}
+	
 
 	bool COGLES2Driver::genericDriverInit(const core::dimension2d<u32>& screenSize, bool stencilBuffer)
 	{
@@ -443,7 +505,6 @@ namespace video
 
 		core::stringc FPVSPath = shaders_path;
 		FPVSPath += "COGLES2FixedPipeline.vsh";
-		os::Printer::log(FPVSPath.c_str());
 
 		core::stringc FPFSPath = shaders_path;
 		FPFSPath += "COGLES2FixedPipeline.fsh";
@@ -454,7 +515,7 @@ namespace video
 		c8* FPVSData = 0;
 		c8* FPFSData = 0;
 
-		long Size = FPVSFile->getSize();
+		long Size = FPVSFile ? FPVSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -463,7 +524,7 @@ namespace video
 			FPVSData[Size] = 0;
 		}
 
-		Size = FPFSFile->getSize();
+		Size = FPFSFile ? FPFSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -496,7 +557,7 @@ namespace video
 		c8* NMVSData = 0;
 		c8* NMFSData = 0;
 
-		Size = NMVSFile->getSize();
+		Size = NMVSFile ? NMVSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -505,7 +566,7 @@ namespace video
 			NMVSData[Size] = 0;
 		}
 
-		Size = NMFSFile->getSize();
+		Size = NMFSFile ? NMFSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -538,7 +599,7 @@ namespace video
 		c8* PMVSData = 0;
 		c8* PMFSData = 0;
 
-		Size = PMVSFile->getSize();
+		Size = PMVSFile ? PMVSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -547,7 +608,7 @@ namespace video
 			PMVSData[Size] = 0;
 		}
 
-		Size = PMFSFile->getSize();
+		Size = PMFSFile ? PMFSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -610,7 +671,7 @@ namespace video
 		c8* R2DVSData = 0;
 		c8* R2DFSData = 0;
 
-		Size = R2DVSFile->getSize();
+		Size = R2DVSFile ? R2DVSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -619,7 +680,7 @@ namespace video
 			R2DVSData[Size] = 0;
 		}
 
-		Size = R2DFSFile->getSize();
+		Size = R2DFSFile ? R2DFSFile->getSize() : 0;
 
 		if (Size)
 		{
@@ -3058,7 +3119,7 @@ namespace video
 				setActiveTexture(GL_TEXTURE0 + stage);
 
 				if(Driver->CurrentTexture[stage])
-					glBindTexture(GL_TEXTURE_2D, static_cast<const COGLES2Texture*>(Driver->CurrentTexture[stage])->getOpenGLTextureName());
+					glBindTexture(GL_TEXTURE_2D, Driver->CurrentTexture[stage]->getOpenGLTextureName());
 
 				Texture[stage] = Driver->CurrentTexture[stage];
 			}

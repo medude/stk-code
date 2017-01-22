@@ -15,13 +15,13 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#ifndef SERVER_ONLY
+
 #include "graphics/gpu_particles.hpp"
 
 #include "config/user_config.hpp"
-#include "graphics/glwrap.hpp"
 #include "graphics/irr_driver.hpp"
 #include "graphics/particle_emitter.hpp"
-#include "graphics/shaders.hpp"
 #include "graphics/shared_gpu_objects.hpp"
 #include "graphics/texture_shader.hpp"
 #include "guiengine/engine.hpp"
@@ -157,7 +157,7 @@ ParticleSystemProxy::ParticleSystemProxy(bool createDefaultEmitter,
     track_z = 0;
     track_x_len = 0;
     track_z_len = 0;
-    texture = 0;
+    m_texture_name = 0;
 }
 
 ParticleSystemProxy::~ParticleSystemProxy()
@@ -393,9 +393,7 @@ void ParticleSystemProxy::setEmitter(scene::IParticleEmitter* emitter)
         assert(0 && "Wrong particle type");
     }
 
-    video::ITexture *tex = getMaterial(0).getTexture(0);
-    compressTexture(tex, true, true);
-    texture = getTextureGLuint(getMaterial(0).getTexture(0));
+    m_texture_name = getMaterial(0).getTexture(0)->getOpenGLTextureName();
 }
 
 void ParticleSystemProxy::cleanGL()
@@ -496,6 +494,7 @@ void ParticleSystemProxy::simulate()
     glDrawArrays(GL_POINTS, 0, m_count);
     glEndTransformFeedback();
     glBindVertexArray(0);
+    glActiveTexture(GL_TEXTURE0);
 
     glDisable(GL_RASTERIZER_DISCARD);
 #ifdef DEBUG_PARTICLES
@@ -526,7 +525,7 @@ void ParticleSystemProxy::drawFlip()
     glBlendFunc(GL_ONE, GL_ONE);
     FlipParticleRender::getInstance()->use();
 
-    FlipParticleRender::getInstance()->setTextureUnits(texture, irr_driver->getDepthStencilTexture());
+    FlipParticleRender::getInstance()->setTextureUnits(m_texture_name, irr_driver->getDepthStencilTexture());
     FlipParticleRender::getInstance()->setUniforms();
 
     glBindVertexArray(current_rendering_vao);
@@ -541,7 +540,7 @@ void ParticleSystemProxy::drawNotFlip()
         glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     SimpleParticleRender::getInstance()->use();
 
-    SimpleParticleRender::getInstance()->setTextureUnits(texture, irr_driver->getDepthStencilTexture());
+    SimpleParticleRender::getInstance()->setTextureUnits(m_texture_name, irr_driver->getDepthStencilTexture());
     video::SColorf ColorFrom = video::SColorf(getColorFrom()[0], getColorFrom()[1], getColorFrom()[2]);
     video::SColorf ColorTo = video::SColorf(getColorTo()[0], getColorTo()[1], getColorTo()[2]);
 
@@ -632,3 +631,5 @@ void ParticleSystemProxy::render() {
         draw();
     }
 }
+
+#endif   // SERVER_ONLY

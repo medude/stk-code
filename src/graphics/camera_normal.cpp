@@ -19,12 +19,12 @@
 
 #include "graphics/camera_normal.hpp"
 
+#include "config/stk_config.hpp"
 #include "karts/abstract_kart.hpp"
 #include "karts/explosion_animation.hpp"
 #include "karts/kart.hpp"
 #include "karts/kart_properties.hpp"
 #include "karts/skidding.hpp"
-#include "modes/world.hpp"
 #include "tracks/track.hpp"
 
 // ============================================================================
@@ -41,7 +41,8 @@ CameraNormal::CameraNormal(Camera::CameraType type,  int camera_index,
             : Camera(type, camera_index, kart)
 {
     m_distance = kart ? kart->getKartProperties()->getCameraDistance() : 1000.0f;
-    m_ambient_light = World::getWorld()->getTrack()->getDefaultAmbientColor();
+    m_ambient_light = Track::getCurrentTrack()->getDefaultAmbientColor();
+    m_smooth_dt = 0.0f;
 
     // TODO: Put these values into a config file
     //       Global or per split screen zone?
@@ -81,7 +82,7 @@ void CameraNormal::smoothMoveCamera(float dt)
     const KartProperties *kp = m_kart->getKartProperties();
     float max_increase_with_zipper = kp->getZipperMaxSpeedIncrease();
     float max_speed_without_zipper = kp->getEngineMaxSpeed();
-    float current_speed = m_kart->getSpeed();
+    float current_speed = m_kart->getSmoothedSpeed();
 
     const Skidding *ks = m_kart->getSkidding();
     float skid_factor = ks->getVisualSkidRotation();
@@ -101,18 +102,18 @@ void CameraNormal::smoothMoveCamera(float dt)
     Vec3 m_kart_camera_position_with_offset = m_kart->getTrans()(camera_offset);
 
     // next target
-    core::vector3df current_target = m_kart->getXYZ().toIrrVector();
-    current_target.Y += 0.5f;
+    Vec3 current_target = m_kart->getTrans()(Vec3(0, 0.5f, 0));
     // new required position of camera
     core::vector3df wanted_position = m_kart_camera_position_with_offset.toIrrVector();
 
     float f = 5.0f;
-    if ((m_kart->getSpeed() > 5 ) || (m_kart->getSpeed() < 0 ))
+    if ((current_speed > 5 ) || (current_speed < 0 ))
     {
-       f = m_kart->getSpeed()>0 ? m_kart->getSpeed()/3 + 1.0f
-                                : -1.5f * m_kart->getSpeed() + 2.0f;
+       f = current_speed >0 ?         current_speed/3 + 1.0f
+                            : -1.5f * current_speed   + 2.0f;
     }
-    current_position += (wanted_position - current_position) * (dt *f);
+    m_smooth_dt = 0.3f * dt + 0.7f * m_smooth_dt;
+    current_position += (wanted_position - current_position) * (m_smooth_dt*f);
 
     // Avoid camera crash: if the speed is negative, the current_position
     // can oscillate between plus and minus, getting bigger and bigger. If
@@ -128,7 +129,7 @@ void CameraNormal::smoothMoveCamera(float dt)
 
     if(getMode()!=CM_FALLING)
         m_camera->setPosition(current_position);
-    m_camera->setTarget(current_target);//set new target
+    m_camera->setTarget(current_target.toIrrVector());//set new target
 
     assert(!std::isnan(m_camera->getPosition().X));
     assert(!std::isnan(m_camera->getPosition().Y));
@@ -252,8 +253,7 @@ void CameraNormal::positionCamera(float dt, float above_kart, float cam_angle,
                            float side_way, float distance, float smoothing)
 {
     Vec3 wanted_position;
-    Vec3 wanted_target = m_kart->getXYZ();
-    wanted_target.setY(wanted_target.getY() + above_kart);
+    Vec3 wanted_target = m_kart->getTrans()(Vec3(0, above_kart, 0));
 
     float tan_up = tan(cam_angle);
     Vec3 relative_position(side_way,

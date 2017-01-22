@@ -8,9 +8,14 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/"
                     "${ZLIB_INCLUDE_DIR}"
                     "${CMAKE_CURRENT_BINARY_DIR}/../zlib/") # For zconf.h on WIN32
 
-if(NOT USE_GLES2)
-    find_package(OpenGL REQUIRED)
-    include_directories(${OPENGL_INCLUDE_DIR})
+if (SERVER_ONLY)
+    add_definitions(-DNO_IRR_COMPILE_WITH_OPENGL_)
+    add_definitions(-DNO_IRR_COMPILE_WITH_X11_)
+else()
+    if(NOT USE_GLES2)
+        find_package(OpenGL REQUIRED)
+        include_directories(${OPENGL_INCLUDE_DIR})
+    endif()
 endif()
 
 if (UNIX AND NOT APPLE)
@@ -25,6 +30,11 @@ if(APPLE)
 endif()
 
 add_definitions(-DNDEBUG=1 -DIRRLICHT_EXPORTS=1 -DPNG_THREAD_UNSAFE_OK -DPNG_NO_MMX_CODE -DPNG_NO_MNG_FEATURES)
+
+if(UNIX OR MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++0x")
+endif()
+
 if(MSVC)
   add_definitions(/D_IRR_STATIC_LIB_)
   add_definitions(/D_CRT_SECURE_NO_WARNINGS) # Shut up about unsafe stuff
@@ -46,12 +56,6 @@ if(USE_GLES2)
     add_definitions(-D_IRR_COMPILE_WITH_OGLES2_ -DNO_IRR_COMPILE_WITH_SOFTWARE_ -DNO_IRR_COMPILE_WITH_BURNINGSVIDEO_ -DNO_IRR_COMPILE_WITH_OGLES1_ -DNO_IRR_COMPILE_WITH_OPENGL_ -DNO_IRR_USE_NON_SYSTEM_JPEG_LIB_ -DNO_IRR_USE_NON_SYSTEM_LIB_PNG_ -DNO_IRR_USE_NON_SYSTEM_ZLIB_)
 endif()
 
-# Xrandr
-if(UNIX AND NOT APPLE)
-    add_definitions(-DNO_IRR_LINUX_X11_VIDMODE_)
-    add_definitions(-D_IRR_LINUX_X11_RANDR_)
-endif()
-
 if(CYGWIN)
     add_definitions(-DNO_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
 endif()
@@ -60,7 +64,6 @@ endif()
 set(IRRLICHT_SOURCES
 source/Irrlicht/CAnimatedMeshSceneNode.cpp
 source/Irrlicht/CAttributes.cpp
-source/Irrlicht/CB3DMeshFileLoader.cpp
 source/Irrlicht/CBillboardSceneNode.cpp
 source/Irrlicht/CBoneSceneNode.cpp
 source/Irrlicht/CCameraSceneNode.cpp
@@ -187,11 +190,10 @@ source/Irrlicht/CZipReader.cpp
 source/Irrlicht/Irrlicht.cpp
 source/Irrlicht/irrXML.cpp
 source/Irrlicht/os.cpp
-source/Irrlicht/BuiltInFont.h
+source/Irrlicht/COpenGLNormalMapRenderer.cpp
 source/Irrlicht/CAnimatedMeshSceneNode.h
 source/Irrlicht/CAttributeImpl.h
 source/Irrlicht/CAttributes.h
-source/Irrlicht/CB3DMeshFileLoader.h
 source/Irrlicht/CBillboardSceneNode.h
 source/Irrlicht/CBlit.h
 source/Irrlicht/CBoneSceneNode.h
@@ -339,6 +341,7 @@ source/Irrlicht/S4DVertex.h
 source/Irrlicht/SoftwareDriver2_compile_config.h
 source/Irrlicht/SoftwareDriver2_helper.h
 source/Irrlicht/wglext.h
+source/Irrlicht/COpenGLNormalMapRenderer.h
 
 include/aabbox3d.h
 include/CDynamicMeshBuffer.h

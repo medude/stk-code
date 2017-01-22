@@ -3,10 +3,11 @@
   <card is="Intel(R) HD Graphics 3000" os="windows"                disable="UniformBufferObject"/>
   <card is="Intel(R) HD Graphics 3000" os="windows"                disable="AdvancedPipeline"/>
   <card is="Intel(R) HD Graphics 3000" os="windows"                disable="FramebufferSRGBWorking"/>
+  <card is="Intel(R) HD Graphics"      os="windows"                disable="ForceLegacyDevice"/>
   <card contains="Intel"          os="osx"                         disable="GI"/>
   <card contains="Intel"          os="linux"    version="<11.2"    disable="ComputeShader"/>
   <card contains="Intel"          os="linux"    version="<11.2"    disable="GeometryShader"/>
-  <card contains="Intel"          os="linux"    version="<16.0"    disable="FramebufferSRGBCapable"/>
+  <card contains="Intel"          os="linux"                       disable="FramebufferSRGBCapable"/>
   <card contains="Intel"          os="linux"    version="<11.2"    disable="TextureCompressionS3TC"/>
   <card contains="Intel"          os="windows"                     disable="TextureCompressionS3TC"/>
   <card contains="Intel"          os="osx"                         disable="TextureCompressionS3TC"/>
@@ -27,5 +28,8 @@
   <card contains="Radeon"         os="linux"    version="<14.300"  disable="DriverRecentEnough"/>
   <card contains="Radeon"         os="windows"  version="<14.300"  disable="DriverRecentEnough"/>
   <card contains="ATI"            os="windows"  version="<14.300"  disable="DriverRecentEnough"/>
+  <card contains="ATI"            os="windows"  version="<=3.1.8787" disable="ForceLegacyDevice"/>
+  <card                           os="android"                     disable="TextureFormatBGRA8888"/>
+  <card                           os="android"                     disable="ColorBufferFloat"/>
+  <card contains="Android Emulator" os="android"                   disable="ForceLegacyDevice"/>
 </graphical-restrictions>
-

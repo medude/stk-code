@@ -659,10 +659,15 @@ namespace GUIEngine
 #include "config/user_config.hpp"
 #include "font/bold_face.hpp"
 #include "font/digit_face.hpp"
+#include "font/font_manager.hpp"
+#include "font/font_settings.hpp"
 #include "font/regular_face.hpp"
 #include "input/input_manager.hpp"
 #include "io/file_manager.hpp"
+#ifndef SERVER_ONLY
 #include "graphics/2dutils.hpp"
+#endif
+#include "graphics/irr_driver.hpp"
 #include "guiengine/event_handler.hpp"
 #include "guiengine/modaldialog.hpp"
 #include "guiengine/message_queue.hpp"
@@ -679,7 +684,6 @@ namespace GUIEngine
 #include <iostream>
 #include <assert.h>
 #include <irrlicht.h>
-#include "graphics/glwrap.hpp"
 
 using namespace irr::gui;
 using namespace irr::video;
@@ -1119,6 +1123,7 @@ namespace GUIEngine
 
     void render(float elapsed_time)
     {
+#ifndef SERVER_ONLY
         GUIEngine::dt = elapsed_time;
 
         // Not yet initialized, or already cleaned up
@@ -1206,7 +1211,6 @@ namespace GUIEngine
                                                   y_from - count*text_height),
                                 core::dimension2d<s32>(screen_size.Width,
                                                        text_height) );
-
                     GL32_draw2DRectangle(SColor(255,252,248,230),
                                                        msgRect);
                     Private::g_font->draw((*it).m_message.c_str(),
@@ -1242,7 +1246,7 @@ namespace GUIEngine
             DemoWorld::resetIdleTime();
         }
 
-
+#endif
     }   // render
 
     // -----------------------------------------------------------------------
@@ -1250,6 +1254,7 @@ namespace GUIEngine
 
     void renderLoading(bool clearIcons)
     {
+#ifndef SERVER_ONLY
         if (clearIcons) g_loading_icons.clear();
 
         g_skin->drawBgImage();
@@ -1313,7 +1318,7 @@ namespace GUIEngine
                 x = ICON_MARGIN;
             }
         }
-
+#endif
     } // renderLoading
 
     // -----------------------------------------------------------------------

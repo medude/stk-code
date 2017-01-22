@@ -26,6 +26,7 @@
 #include "utils/types.hpp"
 
 #include <algorithm>
+#include <array>
 
 namespace GraphicsRestrictions
 {
@@ -39,7 +40,7 @@ namespace GraphicsRestrictions
         /** The list of names used in the XML file for the graphics
          *  restriction types. They must be in the same order as the types. */
 
-        const char *m_names_of_restrictions[] = {
+        std::array<std::string, 27> m_names_of_restrictions = {
             "UniformBufferObject",
             "GeometryShader",
             "DrawIndirect",
@@ -57,12 +58,16 @@ namespace GraphicsRestrictions
             "TextureCompressionS3TC",
             "AMDVertexShaderLayer",
             "ExplicitAttribLocation",
+            "TextureFilterAnisotropic",
+            "TextureFormatBGRA8888",
+            "ColorBufferFloat",
             "DriverRecentEnough",
             "HighDefinitionTextures",
             "AdvancedPipeline",
             "FramebufferSRGBWorking",
             "FramebufferSRGBCapable",
             "GI",
+            "ForceLegacyDevice"
         };
     }   // namespace Private
     using namespace Private;
@@ -71,12 +76,10 @@ namespace GraphicsRestrictions
      *  GR_COUNT if the name is not found. */
 GraphicsRestrictionsType getTypeForName(const std::string &name)
 {
-    unsigned int i = 0;
-    while (m_names_of_restrictions[i] != NULL)
+    for (unsigned int i = 0; i < m_names_of_restrictions.size(); i++)
     {
         if (name == m_names_of_restrictions[i])
             return (GraphicsRestrictionsType)i;
-        i++;
     }
     return GR_COUNT;
 }   // getTypeForName
@@ -192,7 +195,8 @@ public:
 
         // AMD: driver_version = "4.3.13283 Core Profile/Debug Context 14.501.1003.0"
         // ----------------------------------------------
-        if (card_name.find("AMD") != std::string::npos)
+        if (card_name.find("AMD") != std::string::npos
+            || card_name.find("Radeon") != std::string::npos)
         {
             std::vector<std::string> s = StringUtils::split(driver_version, ' ');
             if (s.size() == 5)
@@ -272,7 +276,7 @@ class Rule : public NoCopy
 {
 private:
     /** Operators to test for a card. */
-    enum {CARD_IS, CARD_CONTAINS} m_card_test;
+    enum {CARD_IGNORE, CARD_IS, CARD_CONTAINS} m_card_test;
 
     /** Name of the card for which this rule applies. */
     std::string m_card_name;
@@ -293,6 +297,8 @@ public:
     Rule(const XMLNode *rule)
     {
         m_version_test = VERSION_IGNORE;
+        m_card_test = CARD_IGNORE;
+
         if(rule->get("is", &m_card_name))
         {
             m_card_test = CARD_IS;
@@ -340,7 +346,7 @@ public:
         // -----------
         if(m_os.size()>0)
         {
-#ifdef __linux__
+#if defined(__linux__) && !defined(ANDROID)
             if(m_os!="linux") return false;
 #endif
 #ifdef WIN32
@@ -352,12 +358,16 @@ public:
 #ifdef BSD
             if(m_os!="bsd") return false;
 #endif
+#ifdef ANDROID
+            if(m_os!="android") return false;
+#endif
         }   // m_os.size()>0
 
         // Test for card
         // -------------
         switch(m_card_test)
         {
+        case CARD_IGNORE: break;   // always true
         case CARD_IS:
             if(card!=m_card_name) return false;
             break;

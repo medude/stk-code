@@ -28,12 +28,14 @@
 #include "input/device_manager.hpp"
 #include "input/gamepad_device.hpp"
 #include "input/keyboard_device.hpp"
+#include "input/multitouch_device.hpp"
 #include "input/input.hpp"
 #include "karts/controller/controller.hpp"
 #include "karts/abstract_kart.hpp"
 #include "modes/demo_world.hpp"
 #include "modes/profile_world.hpp"
 #include "modes/world.hpp"
+#include "network/rewind_manager.hpp"
 #include "physics/physics.hpp"
 #include "race/history.hpp"
 #include "replay/replay_recorder.hpp"
@@ -100,6 +102,8 @@ InputManager::~InputManager()
 void InputManager::handleStaticAction(int key, int value)
 {
     static bool control_is_pressed = false;
+    static bool shift_is_pressed   = false;
+
     World *world = World::getWorld();
 
     // When no players... a cutscene
@@ -110,7 +114,7 @@ void InputManager::handleStaticAction(int key, int value)
     }
 
 
-    if (world != NULL && UserConfigParams::m_artist_debug_mode && 
+    if (world != NULL && UserConfigParams::m_artist_debug_mode &&
         control_is_pressed && value > 0)
     {
         if (Debug::handleStaticAction(key))
@@ -149,6 +153,10 @@ void InputManager::handleStaticAction(int key, int value)
         case KEY_LWIN:
             control_is_pressed = value!=0;
             break;
+        case KEY_LSHIFT:
+        case KEY_RSHIFT:
+        case KEY_SHIFT:
+            shift_is_pressed = value!=0; break;
 
         // Flying up and down
         case KEY_KEY_I:
@@ -267,9 +275,22 @@ void InputManager::handleStaticAction(int key, int value)
             if (value ==0 )
                 irr_driver->requestScreenshot();
             break;
+        case KEY_F11:
+            if(value && shift_is_pressed && world && RewindManager::isEnabled())
+            {
+                printf("Enter rewind to time:");
+                char s[256];
+                fgets(s, 256, stdin);
+                float t;
+                StringUtils::fromString(s,t);
+                RewindManager::get()->rewindTo(t);
+                Log::info("Rewind", "Rewinding from %f to %f",
+                          world->getTime(), t);
+            }
+            break;
+
             /*
-        case KEY_F1:
-            if (UserConfigParams::m_artist_debug_mode && world)
+            else if (UserConfigParams::m_artist_debug_mode && world)
             {
                 AbstractKart* kart = world->getLocalPlayerKart(0);
 
@@ -630,7 +651,7 @@ void InputManager::dispatchInput(Input::InputType type, int deviceID,
         else if (button == KEY_RIGHT)  action = PA_MENU_RIGHT;
         else if (button == KEY_SPACE)  action = PA_MENU_SELECT;
         else if (button == KEY_RETURN) action = PA_MENU_SELECT;
-        else if (button == KEY_TAB)    
+        else if (button == KEY_TAB)
         {
             if (shift_mask)
             {
@@ -994,6 +1015,30 @@ EventPropagation InputManager::input(const SEvent& event)
             return EVENT_BLOCK; // Don't propagate key up events
         }
     }
+    else if (event.EventType == EET_TOUCH_INPUT_EVENT)
+    {
+        MultitouchDevice* device = m_device_manager->getMultitouchDevice();
+        unsigned int id = event.TouchInput.ID;
+
+        if (device != NULL && id < device->m_events.size())
+        {
+            device->m_events[id].id = id;
+            device->m_events[id].x = event.TouchInput.X;
+            device->m_events[id].y = event.TouchInput.Y;
+
+            if (event.TouchInput.Event == ETIE_PRESSED_DOWN)
+            {
+                device->m_events[id].touched = true;
+            }
+            else if (event.TouchInput.Event == ETIE_LEFT_UP)
+            {
+                device->m_events[id].touched = false;
+            }
+
+            m_device_manager->updateMultitouchDevice();
+            device->updateDeviceState(id);
+        }
+    }
     // Use the mouse to change the looking direction when first person view is activated
     else if (event.EventType == EET_MOUSE_INPUT_EVENT)
     {
@@ -1075,6 +1120,35 @@ EventPropagation InputManager::input(const SEvent& event)
                 }
             }
         }
+
+        // Simulate touch event on non-android devices
+        #if !defined(ANDROID)
+        if (UserConfigParams::m_multitouch_enabled == true &&
+            (type == EMIE_LMOUSE_PRESSED_DOWN || type == EMIE_LMOUSE_LEFT_UP ||
+             type == EMIE_MOUSE_MOVED))
+        {
+            MultitouchDevice* device = m_device_manager->getMultitouchDevice();
+
+            if (device != NULL)
+            {
+                device->m_events[0].id = 0;
+                device->m_events[0].x = event.MouseInput.X;
+                device->m_events[0].y = event.MouseInput.Y;
+
+                if (type == EMIE_LMOUSE_PRESSED_DOWN)
+                {
+                    device->m_events[0].touched = true;
+                }
+                else if (type == EMIE_LMOUSE_LEFT_UP)
+                {
+                    device->m_events[0].touched = false;
+                }
+
+                m_device_manager->updateMultitouchDevice();
+                device->updateDeviceState(0);
+            }
+        }
+        #endif
 
         /*
         EMIE_LMOUSE_PRESSED_DOWN    Left mouse button was pressed down.
