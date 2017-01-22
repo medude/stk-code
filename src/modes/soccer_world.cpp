@@ -198,7 +198,7 @@ void SoccerWorld::update(float dt)
         {
             // Stop all karts
             for (unsigned int i = 0; i < m_karts.size(); i++)
-                m_karts[i]->setVelocity(btVector3(0, 0, 0));
+                m_karts[i]->setVelocity(btVector3(0, 0, 10));
         }
         m_goal_timer += dt;
 
@@ -206,14 +206,14 @@ void SoccerWorld::update(float dt)
         {
             setPhase(WorldStatus::RACE_PHASE);
             m_goal_timer = 0.0f;
-            if (!isRaceOver())
+            /*if (!isRaceOver())
             {
                 // Reset all karts
                 for (unsigned int i = 0; i < m_karts.size(); i++)
                     moveKartAfterRescue(m_karts[i]);
                 if (UserConfigParams::m_arena_ai_stats)
                     getKart(8)->flyUp();
-            }
+            }*/
         }
     }
     if (UserConfigParams::m_arena_ai_stats)
